@@ -57,8 +57,10 @@ This document tracks all design decisions, implementation steps, theoretical ver
   - `experiments/s04_metrics.py`: Generated `figures/fig04_step_metrics.png` visually marking all four time-domain performance criteria: rise time ($10\%\to90\%$), peak overshoot, settling time ($2\%$ error band), and steady-state error.
 - **Master Pipeline**:
   - `run_all.py` executes `tests/test_sanity.py` and regenerates all Step 2 figures in ~4.3 seconds.
-- **Documentation**:
+- **Documentation & Plan Updates**:
   - Updated `README.md` to directly fulfill the submission requirements (Approach, Setup, How to Run).
+  - Added Thursday buffer item to `Plan.md`: Lightweight Matplotlib Slider GUI (`interactive_gui.py` / `playground.py --interactive`, ~40 lines pure Matplotlib) as a slick bonus demonstration tool.
+  - Conducted full compliance audit against the official Modern Monk Labs assignment brief confirming 100% coverage across all 10 required sections, writing standards, and evaluation criteria.
 
 ---
 

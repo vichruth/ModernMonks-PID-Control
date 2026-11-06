@@ -324,7 +324,7 @@ Write in your own voice, plain and direct. Avoid generic filler ("it is importan
 | **Mon 9 (Day 3)** | Step 5 (Section 7: windup, noise, kick, slow dt) | before/after numbers for all four |
 | **Tue 10 (Day 4)** | Step 6 (Section 8) + `playground.py` | Ku ≈ 8, Tu ≈ 3.63 found by your own sweep |
 | **Wed 11 (Day 5)** | Step 7 (Sections 9-10), `run_all.py`, README, AI_USAGE, **first full PDF draft** | PDF assembled, page count known |
-| **Thu 12 (Day 6)** | Trim to ≤ 15 pages, proofread, fresh-clone test, WRITEUP.md, prediction practice, **submit tonight** | email sent |
+| **Thu 12 (Day 6)** | Trim to ≤ 15 pages, proofread, fresh-clone test, WRITEUP.md, prediction practice, **submit tonight**. *Bonus buffer:* If finishing early, add lightweight Matplotlib Slider GUI (`interactive_gui.py`, pure Matplotlib, ~40 lines) to `playground.py` as a slick bonus tool! | email sent |
 | **Fri 13 (Day 7)** | Buffer only. If you already submitted, practise the interview. Never submit after 6 PM. | |
 
 If you fall behind, cut in this order: stretch goals → back-calculation → grid search → extra myths. **Never cut**: P-only theory check, the four real-world fixes, Ziegler-Nichols, README, AI note.
@@ -340,7 +340,7 @@ If you fall behind, cut in this order: stretch goals → back-calculation → gr
 5. **State definitions and assumptions**, like the noise model, overshoot reference and "never settles". Small, but shows rigour.
 6. **Honest limitations**: simulation not hardware, linear plant, Euler method, one noise model.
 7. **Consistent visual language** (the colour code in section 5) and numbers in captions.
-8. **Stretch goals** (only after everything else is done, in order of value): mass robustness sweep (0.5-2 kg) as one figure → back-calculation vs clamping → grid search over gains with ITAE → relay auto-tune.
+8. **Stretch goals** (only after everything else is done, in order of value): Matplotlib Slider GUI (`interactive_gui.py` / `playground.py --interactive`, pure Matplotlib widgets, zero extra dependencies) for live interactive interview demonstration → mass robustness sweep (0.5-2 kg) as one figure → back-calculation vs clamping → grid search over gains with ITAE → relay auto-tune.
 
 **Using AI without hurting yourself:** let the agent write boilerplate and plotting, but you write the predictions, pick the gains, and read every line of `pid.py`, `sim.py` and `metrics.py` until you could re-type them. If you can't explain a line, ask the agent to explain it, then simplify it.
 
