@@ -17,12 +17,15 @@ EXPERIMENT_SCRIPTS = [
     ("experiments/s02_pid_terms.py", "Figure 2: PID Term Decomposition"),
     ("experiments/s03_plant.py", "Figure 3: Open-Loop Physics & 20 N Holding Force"),
     ("experiments/s04_metrics.py", "Figure 4: Step Response Performance Criteria"),
+    ("experiments/s05_each_part.py", "Figures 5-8 & Tables 1-2: P, I, D Isolation Studies"),
+    ("experiments/s06_compare.py", "Figures 9-10 & Table 3: P/PI/PD/PID Architecture Comparison & Gain Selection"),
+    ("experiments/s07_real_world.py", "Figures 11-14 & Table 4: Real-World Engineering Hazards & Fixes"),
 ]
 
 
 def run_pipeline():
     print("=" * 65)
-    print("      PID CONTROL REPRODUCIBILITY PIPELINE (DAY 1)               ")
+    print("      PID CONTROL REPRODUCIBILITY PIPELINE (MODERN MONK LABS)    ")
     print("=" * 65)
 
     start_time = time.time()

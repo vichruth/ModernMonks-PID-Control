@@ -62,6 +62,30 @@ This document tracks all design decisions, implementation steps, theoretical ver
   - Added Thursday buffer item to `Plan.md`: Lightweight Matplotlib Slider GUI (`interactive_gui.py` / `playground.py --interactive`, ~40 lines pure Matplotlib) as a slick bonus demonstration tool.
   - Conducted full compliance audit against the official Modern Monk Labs assignment brief confirming 100% coverage across all 10 required sections, writing standards, and evaluation criteria.
 
+### [2026-11-07] - Step 3: Section 5 (Each Part Alone - Day 2)
+- **Experiments Implemented (`experiments/s05_each_part.py`)**:
+  - `fig05_p_only.png`: Step responses for $K_p \in [10, 50, 100, 300, 1000]$, showing steady-state error reducing from $0.6667\text{ m}$ to $0.0196\text{ m}$ while overshoot increases from $0\%$ to $57.56\%$.
+  - `fig06_p_theory_vs_sim.png`: Exact theoretical curves for $e_{ss} = k/(K_p+k)$ and $\zeta$-predicted overshoot with simulated dots overlaid (0.000000 error difference).
+  - `fig07_add_i.png`: Integral action ($K_p = 100, K_i \in [0, 50, 200, 500]$), demonstrating that the integral term alone accumulates to exactly $20\text{ N}$ to eliminate steady-state offset.
+  - `fig08_add_d.png`: Derivative action ($K_p = 300, K_d \in [0, 10, 30, 60]$), proving dynamic damping ratio $\zeta = (c+K_d)/(2\sqrt{m(k+K_p)})$ reaches critical damping ($\zeta = 1$) at $K_d \approx 25.8\text{ N}\cdot\text{s/m}$, quenching overshoot completely at $K_d = 30$ ($0\%$).
+  - `results/t01_p_metrics.md`: Table of metrics across all $K_p$ gains.
+  - `results/t02_theory_vs_sim.md`: 4-decimal place agreement between analytical derivations and simulation.
+
+### [2026-11-07] - Step 4: Section 6 (Compare and Choose - Day 2)
+- **Experiments Implemented (`experiments/s06_compare.py`)**:
+  - `fig09_p_pi_pd_pid.png`: Direct comparison of P, PI, PD, and PID controllers on a single plot with actuator force demands underneath.
+  - `fig10_final_gains.png`: Selected baseline PID ($K_p = 300, K_i = 300, K_d = 30$) time-history showing position response and decomposition into individual P, I, and D forces.
+  - `results/t03_compare_controllers.md`: Performance metrics and peak forces table, plus systematic gain optimization grid search ranking candidates against strict written criteria (Overshoot < 5%, Settling < 1.5 s, Zero steady error).
+  - Highlighted engineering trade-off: Aggressive PID ($600/300/30$) achieves ultra-fast settling ($0.16\text{ s}$), but demands $600\text{ N}$ at $t=0$, which is physically impossible on a $30\text{ N}$ motor.
+
+### [2026-11-07] - Step 5: Section 7 (Real-World Problems - Day 3)
+- **Experiments Implemented (`experiments/s07_real_world.py`)**:
+  - `fig11_windup_clamping.png`: Actuator saturation ($|u| \le 30\text{ N}$) and integrator windup. Demonstrating that conditional clamping eliminates windup overshoot from $17.6\%$ down to $0.0\%$ and cuts settling from $2.98\text{ s}$ to $1.06\text{ s}$.
+  - `fig12_noise_filtering.png`: High-frequency sensor noise ($\sigma = 1\text{ mm}$). Proving numerical differentiation of noise creates $44.0\text{ N}$ RMS chatter on the motor, and showing that a first-order low-pass filter ($\tau = 0.02 - 0.05\text{ s}$) suppresses chatter down to $1.78\text{ N} - 0.91\text{ N}$.
+  - `fig13_setpoint_kick.png`: Setpoint kick at $t=0$. Proving D-on-error causes a violent $30,300\text{ N}$ spike, whereas D-on-measurement bounds peak force to a gentle $300\text{ N}$ (100x reduction).
+  - `fig14_slow_sampling.png`: Controller sampling latency via Zero-Order Hold. Verified stability up to $\Delta t_{\text{ctrl}} \le 20\text{ ms}$, degradation at $50\text{ ms}$ ($17.5\%$ overshoot), and divergence above $\Delta t_{\text{crit}} \approx 66.5\text{ ms}$.
+  - `results/t04_real_world_fixes.md`: Summary table documenting before/after metrics and physical mechanisms for all four engineering hazards.
+
 ---
 
 ## Running Summary (What Worked / What Didn't / Next Steps)
@@ -75,4 +99,6 @@ This document tracks all design decisions, implementation steps, theoretical ver
 - *Three-lag simulation duration*: Initial steady-state test ran for $10\,\text{s}$ ($10$ time constants), reaching $0.9972$ (analytically exact for $t=10\,\text{s}$). Extended duration to $15\,\text{s}$ where theoretical settling achieves $>99.99\%$, cleanly validating $1.000$ DC gain.
 
 ### Next Steps
-- Review Step 1 and Step 2 code with the user before proceeding to Step 3 (Section 5: Each part alone).
+- Implement Step 6 (Section 8: Choosing the gains via manual tuning & Ziegler-Nichols tuning on the $1/(s+1)^3$ plant).
+- Implement Step 7 (Section 9: The reusable code final demo & Section 10: Real robots and myths).
+- Compile the 15-page PDF report guide draft.
