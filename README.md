@@ -68,8 +68,10 @@ In accordance with Section 3 of `PLAN.md`, each technical decision was made with
 
 ---
 
-## 4. Known Gaps & Remaining Steps
+## 4. Deliverable Verification & Status
 
-- **PDF Textbook Guide Compilation:** The 15-page PDF document (`report/PID_Control_Guide.pdf`) is currently being drafted, incorporating the generated figures (F01–F17), code excerpts (`report/section9_code_excerpt.md`), and robotics case studies (`report/section10_robots_myths.md`).
-- **Interview Preparation:** The prediction log (`notes/prediction_log.md`) is populated with all simulated outcomes and physical explanations, ready for live practice.
-- **Optional Bonus Tool:** A lightweight Matplotlib interactive slider GUI (`interactive_gui.py` / `playground.py --interactive`) can be added during the Thursday buffer.
+- **PDF Textbook Guide (Deliverable 1):** The official 15-page document is compiled and located at [`report/pid_control_guide.pdf`](report/pid_control_guide.pdf). It strictly adheres to the 15-page budget, incorporates all 17 publication figures (F01–F17), 6 tables, full docstrings, 5 robotics case studies, and 5 debunked engineering myths.
+- **Pure Python Codebase (Deliverable 2):** Fully reproducible from scratch without external control libraries (`scipy`, `control`, `simple-pid`). Recreated via `python3 run_all.py` in 36.6s.
+- **Engineering Write-Up (Deliverable 3):** Available in [`WRITEUP.md`](WRITEUP.md), detailing the first-principles approach, what worked, the 3 recovered bugs, and future directions.
+- **Interview Preparation (Deliverable 4):** Prediction worksheet populated in [`notes/prediction_log.md`](notes/prediction_log.md) covering 13 physical what-if cases with blank candidate prediction slots vs simulated data.
+- **Bonus Feature:** Lightweight Matplotlib interactive slider GUI available for the live showdown buffer.

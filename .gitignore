@@ -6,4 +6,8 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+*.aux
+*.log
+*.out
+*.toc
 
