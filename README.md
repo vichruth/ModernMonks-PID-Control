@@ -20,7 +20,12 @@ python3 run_all.py
 
 To run individual what-if interview experiments interactively:
 ```bash
+# Command-line parameter test:
 python3 playground.py --kp 300 --ki 300 --kd 30 --mass 2.0 --umax 30 --no-antiwindup --kd-tau 0.02
+
+# Live interactive visualizer GUI with real-time Matplotlib sliders:
+python3 interactive_gui.py
+# (or equivalently: python3 playground.py --interactive)
 ```
 
 Key project documentation:

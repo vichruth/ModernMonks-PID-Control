@@ -135,6 +135,7 @@ pid-control-assignment/
 ├── .gitignore                # __pycache__/, .venv/, .DS_Store
 ├── run_all.py                # regenerates EVERY figure + table from scratch
 ├── playground.py             # interview tool: change a gain/mass/noise/limit from the command line
+├── interactive_gui.py        # bonus interview visualizer: pure Matplotlib slider GUI (or playground.py --interactive)
 │
 ├── pidlab/                   # the reusable code (no plotting in here)
 │   ├── __init__.py
@@ -201,6 +202,14 @@ def simulate(plant, controller, setpoint, T, dt_sim=0.001, dt_ctrl=None,
 python playground.py --kp 300 --ki 300 --kd 30 --mass 2 --noise 0.001 --umax 30 --no-antiwindup
 ```
 It prints the four metrics and shows the plot.
+
+**Bonus Visualizer Tool (`interactive_gui.py` / `playground.py --interactive`):**
+```bash
+python interactive_gui.py
+# or:
+python playground.py --interactive
+```
+Pure Matplotlib interactive slider GUI (~60 lines, pure NumPy + Matplotlib, zero extra dependencies). Allows live dragging of $K_p, K_i, K_d$, mass $m$, actuator saturation limit $u_{\max}$, and noise $\sigma$, instantaneously updating step response curves, force decomposition, and key metrics ($t_r, \text{OS}\%, t_s, e_{ss}$, peak force). Runs out of the box in any standard Matplotlib environment.
 
 ---
 
@@ -329,6 +338,8 @@ Write in your own voice, plain and direct. Avoid generic filler ("it is importan
 | **Thu 12 (Day 6)** | Trim to ≤ 15 pages, proofread, fresh-clone test, WRITEUP.md, prediction practice, **submit tonight** | email sent |
 | **Fri 13 (Day 7)** | Buffer only. If you already submitted, practise the interview. Never submit after 6 PM. | |
 
+> **Bonus Visualizer Tool (Thursday buffer):** If we finish early, we can add a lightweight Matplotlib Slider GUI (`interactive_gui.py` / `playground.py --interactive`, pure Matplotlib, ~60 lines) as a slick bonus tool! Zero external GUI libraries, fully compliant with assignment rules, and perfect for live interview what-ifs.
+
 If you fall behind, cut in this order: stretch goals → back-calculation → grid search → extra myths. **Never cut**: P-only theory check, the four real-world fixes, Ziegler-Nichols, README, AI note.
 
 ---
@@ -337,7 +348,7 @@ If you fall behind, cut in this order: stretch goals → back-calculation → gr
 
 1. **Theory next to simulation, everywhere.** Predicted vs measured tables. This is the "calculations" and "concepts" marks and it is the exact skill the interview tests.
 2. **A prediction log** (`notes/prediction_log.md`): before each run, write one line "I expect …"; after, "got … because …". If you were wrong, say why. It feeds the "what didn't work" write-up.
-3. **`playground.py`** so you can re-run any what-if in seconds during interview prep.
+3. **`playground.py` & Interactive Visualizer GUI (`interactive_gui.py`)** so you can re-run any what-if in seconds during interview prep, or dynamically demonstrate parameter sensitivity live with sliders in pure Matplotlib.
 4. **Peak force column** in the comparison table. It connects Section 6 to Section 7 and shows engineering judgement.
 5. **State definitions and assumptions**, like the noise model, overshoot reference and "never settles". Small, but shows rigour.
 6. **Honest limitations**: simulation not hardware, linear plant, Euler method, one noise model.

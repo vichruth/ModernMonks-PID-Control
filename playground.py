@@ -50,12 +50,28 @@ def parse_args():
     parser.add_argument("--d-tau", "--kd-tau", dest="d_tau", type=float, default=0.0, help="Derivative low-pass filter time constant [s]")
     parser.add_argument("--save", type=str, default="figures/playground.png", help="Save figure to file (default: 'figures/playground.png')")
     parser.add_argument("--no-save", action="store_true", help="Disable saving plot figure")
-    parser.add_argument("--plot", action="store_true", help="Display interactive plot window (GUI)")
+    parser.add_argument("--plot", action="store_true", help="Display static plot window")
+    parser.add_argument("--interactive", "--gui", dest="interactive", action="store_true", help="Launch live interactive Matplotlib Slider GUI")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+
+    if args.interactive:
+        from interactive_gui import launch_gui
+        umax_init = 30.0 if not np.isfinite(args.umax) else args.umax
+        fig, _ = launch_gui(
+            kp0=args.kp,
+            ki0=args.ki,
+            kd0=args.kd,
+            m0=args.mass,
+            umax0=umax_init,
+            noise0=args.noise,
+        )
+        plt.suptitle("Modern Monk Labs PID Interactive Visualizer", fontsize=12, fontweight="bold", y=0.98)
+        plt.show()
+        return
 
     # Configure plant & controller
     plant = MassSpringDamper(m=args.mass, c=args.c, k=args.k)
