@@ -301,11 +301,12 @@ def run_section_8():
         "",
         "## Step-by-Step Practical Tuning Procedure",
         "",
-        r"1. **Set all gains to zero:** $K_p = 0, K_i = 0, K_d = 0$.",
-        r"2. **Increase $K_p$ until responsiveness is achieved:** Raise $K_p$ until the block moves briskly toward the target setpoint (e.g., $K_p = 300$). Notice that steady-state error persists ($e_{ss} = 0.0625\text{ m}$) and oscillations emerge (overshoot = $31.2\%$).",
-        r"3. **Increase $K_d$ to quench oscillation:** Add derivative damping until overshoot drops to the target limit (e.g., $K_d = 30\text{ N}\cdot\text{s/m}$ achieves $\zeta = 1.12$, eliminating overshoot). Always engage derivative low-pass filtering ($\tau = 0.02\text{ s}$) to prevent actuator chatter from sensor noise.",
-        r"4. **Increase $K_i$ to eliminate steady-state offset:** Slowly raise $K_i$ (e.g., $K_i = 300\text{ N/(m}\cdot\text{s)}$) to build holding force memory, driving final position to exactly $1.0000\text{ m}$ ($e_{ss} \equiv 0.0000\text{ m}$).",
-        r"5. **Enable clamping anti-windup:** Always clamp integration during actuator saturation ($|u| \le 30\text{ N}$) to prevent catastrophic overshoot caused by accumulated integrator windup.",
+        r"1. **(1) Set $K_i = K_d = 0$:** Start with proportional-only control ($K_p = 0, K_i = 0, K_d = 0$) to establish the baseline open-loop response.",
+        r"2. **(2) Raise $K_p$ until it's fast but starts to overshoot:** Increase $K_p$ to achieve acceptable responsiveness (e.g., $K_p = 300\text{ N/m}$). Notice that steady-state error shrinks ($e_{ss} = 0.0625\text{ m}$), but the system begins to bounce with $31.2\%$ overshoot.",
+        r"3. **(3) Add $K_d$ until the bounce is damped:** Increase derivative gain (e.g., $K_d = 30\text{ N}\cdot\text{s/m}$) to introduce dynamic velocity braking. This raises closed-loop damping ($\zeta = 1.12$), completely quenching the oscillation and eliminating overshoot.",
+        r"4. **(4) Add $K_i$ until steady error is gone:** Introduce integral gain (e.g., $K_i = 300\text{ N/(m}\cdot\text{s)}$) to accumulate the required $20\text{ N}$ spring holding force, driving steady-state position to exactly $1.0000\text{ m}$ ($e_{ss} \equiv 0.0000\text{ m}$).",
+        r"5. **(5) If overshoot returns, lower $K_i$ or raise $K_d$:** Adding integral action introduces phase lag that can cause a secondary overshoot ($4.27\%$). If overshoot exceeds tolerance, trim $K_i$ or slightly increase $K_d$ to restore critical damping.",
+        r"6. **(6) Re-check with noise and force limit:** Test the tuned controller under realistic hardware conditions: enable the actuator force limit ($|u| \le 30\text{ N}$) with clamping anti-windup, and enable sensor noise ($\sigma = 1\text{ mm}$) with a first-order low-pass derivative filter ($\tau = 0.02\text{ s}$) to prevent actuator chatter.",
     ]
 
     with open("results/s08_manual_tuning.md", "w") as f:

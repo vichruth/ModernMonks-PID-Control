@@ -23,6 +23,11 @@ To run individual what-if interview experiments interactively:
 python3 playground.py --kp 300 --ki 300 --kd 30 --mass 2.0 --umax 30 --no-antiwindup --kd-tau 0.02
 ```
 
+Key project documentation:
+- [`WRITEUP.md`](WRITEUP.md): 1-page engineering report detailing our first-principles approach, what worked, the 3 recovered bugs, and future directions.
+- [`AI_USAGE.md`](AI_USAGE.md): Transparent disclosure of AI pairing and independent verification.
+- [`notes/prediction_log.md`](notes/prediction_log.md): Pre-interview what-if prediction practice sheet with blank intuition entries vs simulated data.
+
 ---
 
 ## 2. Complete Map: Scripts to Figures and Results Tables
