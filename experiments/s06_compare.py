@@ -50,7 +50,7 @@ def run_section_6():
     ]
 
     sim_results = []
-    T = 3.5
+    T = 15.0
     dt = 0.001
 
     for cfg in configs:
@@ -166,7 +166,7 @@ def run_section_6():
             for kd in kd_candidates:
                 plant = MassSpringDamper(m=1.0, c=10.0, k=20.0)
                 ctrl = PID(kp=kp, ki=ki, kd=kd, dt=0.001, d_on="measurement")
-                sim = simulate(plant, ctrl, setpoint=1.0, T=3.0, dt_sim=0.001)
+                sim = simulate(plant, ctrl, setpoint=1.0, T=15.0, dt_sim=0.001)
                 m = calc_metrics(sim["t"], sim["y"], sim["r"], u=sim["u"])
                 grid_results.append({
                     "kp": kp,

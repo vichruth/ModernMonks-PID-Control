@@ -52,7 +52,9 @@ I ran a quick reference simulation (parallel-form PID, D on measurement, dt = 1 
 closed loop `m·s² + (c+Kd)·s + (k+Kp)`, so `ζ = (c+Kd) / (2·√(m·(k+Kp)))`, overshoot **relative to the final value** = `exp(−πζ/√(1−ζ²))`.
 - Kp = 300, Kd = 0: ζ = 0.28, predicted peak = 0.9375 × 1.4007 = 1.313 → **31.3% over setpoint**; simulated 31.2% ✔
 - Kp = 1000, Kd = 0: ζ = 0.157, predicted 57.6%; simulated 57.56% ✔
+- Kp = 300, Kd = 10: ζ = 0.559 → 12.0% vs final value → **5.0% over the 1 m setpoint** (final value is 0.9375 m); simulated 4.85% ✔. Watch the definition: reporting 11-12% here while Kd = 0 is reported as 31.2% (vs setpoint) mixes two definitions.
 - Kp = 300, Kd = 30: ζ = 1.118 → overdamped → **0% overshoot**; simulated 0% ✔
+- Run every response long enough to truly settle (≥ 10-15 s). At a 3-4 s horizon the PID 300/300/30 "final error" still reads about −0.004 m; at 15 s it is 0.
 
 **Combinations (unlimited force)**
 
@@ -252,7 +254,7 @@ For every step: **code → check against theory/section 2 → write the predicti
 - **S4**: define four measures, mark them on F04.
 
 ### Step 3: Section 5, each part alone (Day 2)
-- **P only** (Kp = 10, 50, 100, 300, 1000): closed loop `m·x'' + c·x' + (k+Kp)·x = Kp·r`; steady state `x = Kp/(k+Kp)`, so error = `k/(k+Kp)`. Table T2 of theory vs sim (agreement to 4 decimals in my check). Explain in words: the controller only pushes when there is error, but holding 1 m needs 20 N, so some error must remain: `Kp·e = 20`, so `e = 20/Kp`... then the spring sees `k·x`, giving the exact formula above.
+- **P only** (Kp = 10, 50, 100, 300, 1000): closed loop `m·x'' + c·x' + (k+Kp)·x = Kp·r`; steady state `x = Kp/(k+Kp)`, so error = `k/(k+Kp)`. Table T2 of theory vs sim (agreement to 4 decimals in my check). Explain in words: the controller only pushes when there is error, but holding 1 m needs force against the spring. At rest, `Kp·(1 − x) = k·x`, so `x = Kp/(Kp+k)` and the error is `k/(Kp+k)`. (It is **not** `20/Kp`: the force the controller supplies is `Kp·e`, which is less than 20 N unless Kp is huge.)
 - **Add I**: at steady state the integral stops changing only when e = 0, and then `Ki·∫e` alone supplies the 20 N. This is the key insight: **I remembers the force needed**. Show it by plotting the I term settling at 20 N.
 - **Add D**: `ζ = (c+Kd)/(2·√(m·(k+Kp)))`. Predict overshoot for Kd = 0, 10, 30, 60 *before* running, then compare. For Kp = 300 overshoot vanishes once ζ ≥ 1, which needs Kd ≥ about 25.8 N·s/m. (Check this arithmetic yourself: ζ = 1 when c + Kd = 2·√320.)
 - Remember D on measurement keeps the PD closed loop exactly 2nd order, so the formula is exact; with D on error there's an extra zero and it's only approximate. Say so.
@@ -324,7 +326,7 @@ Write in your own voice, plain and direct. Avoid generic filler ("it is importan
 | **Mon 9 (Day 3)** | Step 5 (Section 7: windup, noise, kick, slow dt) | before/after numbers for all four |
 | **Tue 10 (Day 4)** | Step 6 (Section 8) + `playground.py` | Ku ≈ 8, Tu ≈ 3.63 found by your own sweep |
 | **Wed 11 (Day 5)** | Step 7 (Sections 9-10), `run_all.py`, README, AI_USAGE, **first full PDF draft** | PDF assembled, page count known |
-| **Thu 12 (Day 6)** | Trim to ≤ 15 pages, proofread, fresh-clone test, WRITEUP.md, prediction practice, **submit tonight**. *Bonus buffer:* If finishing early, add lightweight Matplotlib Slider GUI (`interactive_gui.py`, pure Matplotlib, ~40 lines) to `playground.py` as a slick bonus tool! | email sent |
+| **Thu 12 (Day 6)** | Trim to ≤ 15 pages, proofread, fresh-clone test, WRITEUP.md, prediction practice, **submit tonight** | email sent |
 | **Fri 13 (Day 7)** | Buffer only. If you already submitted, practise the interview. Never submit after 6 PM. | |
 
 If you fall behind, cut in this order: stretch goals → back-calculation → grid search → extra myths. **Never cut**: P-only theory check, the four real-world fixes, Ziegler-Nichols, README, AI note.
@@ -340,7 +342,7 @@ If you fall behind, cut in this order: stretch goals → back-calculation → gr
 5. **State definitions and assumptions**, like the noise model, overshoot reference and "never settles". Small, but shows rigour.
 6. **Honest limitations**: simulation not hardware, linear plant, Euler method, one noise model.
 7. **Consistent visual language** (the colour code in section 5) and numbers in captions.
-8. **Stretch goals** (only after everything else is done, in order of value): Matplotlib Slider GUI (`interactive_gui.py` / `playground.py --interactive`, pure Matplotlib widgets, zero extra dependencies) for live interactive interview demonstration → mass robustness sweep (0.5-2 kg) as one figure → back-calculation vs clamping → grid search over gains with ITAE → relay auto-tune.
+8. **Stretch goals** (only after everything else is done, in order of value): mass robustness sweep (0.5-2 kg) as one figure → back-calculation vs clamping → grid search over gains with ITAE → relay auto-tune.
 
 **Using AI without hurting yourself:** let the agent write boilerplate and plotting, but you write the predictions, pick the gains, and read every line of `pid.py`, `sim.py` and `metrics.py` until you could re-type them. If you can't explain a line, ask the agent to explain it, then simplify it.
 
@@ -357,7 +359,7 @@ Format: they change something, you **predict first**, then run, then explain. Pr
 | Mass 1 → 2 kg | slower dynamics, ζ drops | overshoot 6.9%, settle 1.35 s |
 | Noise σ 1 mm → 2 mm | which term amplifies it? | D noise doubles (~86 N rms raw) |
 | Force limit 30 → 22 N | only 2 N above the 20 N holding force | run it; result is not monotonic |
-| Remove D | overshoot returns | 24.8% at Kp = 100 case; PI-style bounce |
+| Remove D (Kd 30 → 0, Kp = 300, Ki = 300) | ζ drops, bounce returns | **run it yourself**: I did not reference-check this row |
 | Remove anti-windup | integrator charges during saturation | 17.6% overshoot, 2.98 s |
 | Controller 1 ms → 100 ms | stale information | diverges |
 | D on error instead of measurement | step in setpoint | 30,300 N spike |

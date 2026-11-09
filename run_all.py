@@ -20,6 +20,8 @@ EXPERIMENT_SCRIPTS = [
     ("experiments/s05_each_part.py", "Figures 5-8 & Tables 1-2: P, I, D Isolation Studies"),
     ("experiments/s06_compare.py", "Figures 9-10 & Table 3: P/PI/PD/PID Architecture Comparison & Gain Selection"),
     ("experiments/s07_real_world.py", "Figures 11-14 & Table 4: Real-World Engineering Hazards & Fixes"),
+    ("experiments/s08_tuning.py", "Figures 15-16 & Table 5: Ziegler-Nichols Identification & Tuning on 3-Lag Plant"),
+    ("experiments/s09_final_demo.py", "Figure 17 & Table 6: Production Hardened PID Final Verification"),
 ]
 
 
@@ -42,7 +44,7 @@ def run_pipeline():
         print("  ✓ All theoretical assertions and reference checks passed.")
 
     # 2. Execute Experiment Scripts
-    print("\n[2/2] Regenerating Step 2 Figures (Sections 1-4)...")
+    print("\n[2/2] Regenerating All Figures (F01 - F17) and Results Tables (T01 - T06)...")
     for script, desc in EXPERIMENT_SCRIPTS:
         if os.path.exists(script):
             print(f"  -> Running {script} ({desc})...")
@@ -60,7 +62,7 @@ def run_pipeline():
 
     elapsed = time.time() - start_time
     print("\n" + "=" * 65)
-    print(f"  PIPELINE COMPLETE: Step 1 & 2 figures regenerated in {elapsed:.2f}s")
+    print(f"  PIPELINE COMPLETE: All 17 figures and tables regenerated in {elapsed:.2f}s")
     print("=" * 65)
 
 

@@ -5,10 +5,10 @@ Evaluation across P, PI, PD, and PID controllers on the 1 kg mass-spring-damper 
 | Controller Type | Gains ($K_p / K_i / K_d$) | Overshoot (%) | Settling Time (2%) | Rise Time (10-90%) | Final Error | Peak Force (N) | Practical Assessment |
 |---|---|---|---|---|---|---|---|
 | P (Kp=300) | 300 / 0 / 0 | 31.22% | never settles | 0.077 s | 0.0625 m | 300.00 N | Unacceptable steady error ($0.0625$ m); holding spring requires continuous error. |
-| PI (Kp=100, Ki=200) | 100 / 200 / 0 | 21.90% | 0.845 s | 0.148 s | 0.0001 m | 102.18 N | Zero steady error, but excessive overshoot ($21.9%$) due to lack of derivative damping. |
+| PI (Kp=100, Ki=200) | 100 / 200 / 0 | 21.90% | 0.845 s | 0.148 s | 0.0000 m | 102.18 N | Zero steady error, but excessive overshoot ($21.9%$) due to lack of derivative damping. |
 | PD (Kp=300, Kd=30) | 300 / 0 / 30 | 0.00% | never settles | 0.305 s | 0.0625 m | 300.00 N | Zero overshoot, but permanently stops short ($0.0625$ m); never settles within 2% band. |
-| PID (300/300/30) | 300 / 300 / 30 | 4.27% | 1.422 s | 0.206 s | -0.0023 m | 300.30 N | **Optimal candidate**: < 5% overshoot, fast settling (1.42 s), zero error, peak force 300 N. |
-| Aggressive PID (600/300/30) | 600 / 300 / 30 | 1.18% | 0.157 s | 0.102 s | 0.0001 m | 600.30 N | Extremely fast (0.16 s settling), but demands massive 600 N at t=0 (saturates 30 N motors). |
+| PID (300/300/30) | 300 / 300 / 30 | 4.27% | 1.422 s | 0.206 s | -0.0000 m | 300.30 N | **Optimal candidate**: < 5% overshoot, fast settling (1.42 s), zero error, peak force 300 N. |
+| Aggressive PID (600/300/30) | 600 / 300 / 30 | 1.18% | 0.157 s | 0.102 s | 0.0000 m | 600.30 N | Extremely fast (0.16 s settling), but demands massive 600 N at t=0 (saturates 30 N motors). |
 
 ### Systematic Gain Optimization Grid Search
 

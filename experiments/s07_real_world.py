@@ -43,12 +43,12 @@ def run_section_7():
     # =========================================================================
     plant_unclamped = MassSpringDamper(m=1.0, c=10.0, k=20.0)
     ctrl_unclamped = PID(kp=300.0, ki=300.0, kd=30.0, dt=0.001, u_min=-30.0, u_max=30.0, anti_windup="none")
-    sim_unclamped = simulate(plant_unclamped, ctrl_unclamped, setpoint=1.0, T=5.0, dt_sim=0.001)
+    sim_unclamped = simulate(plant_unclamped, ctrl_unclamped, setpoint=1.0, T=15.0, dt_sim=0.001)
     m_unclamped = calc_metrics(sim_unclamped["t"], sim_unclamped["y"], sim_unclamped["r"], u=sim_unclamped["u"])
 
     plant_clamped = MassSpringDamper(m=1.0, c=10.0, k=20.0)
     ctrl_clamped = PID(kp=300.0, ki=300.0, kd=30.0, dt=0.001, u_min=-30.0, u_max=30.0, anti_windup="clamp")
-    sim_clamped = simulate(plant_clamped, ctrl_clamped, setpoint=1.0, T=5.0, dt_sim=0.001)
+    sim_clamped = simulate(plant_clamped, ctrl_clamped, setpoint=1.0, T=15.0, dt_sim=0.001)
     m_clamped = calc_metrics(sim_clamped["t"], sim_clamped["y"], sim_clamped["r"], u=sim_clamped["u"])
 
     t04_entries.append({
@@ -66,8 +66,9 @@ def run_section_7():
     # Position
     ax_w_pos.axhline(1.0, color=COLOR_SETPOINT, linestyle="--", lw=1.5, label="Target (1.0 m)")
     ax_w_pos.axhspan(0.98, 1.02, color="#f0f7f0", alpha=0.8)
-    ax_w_pos.plot(sim_unclamped["t"], sim_unclamped["y"], color="#d62728", lw=1.8, label=f"Unclamped (OS: {m_unclamped['overshoot']:.1f}%, $t_s$: {m_unclamped['settling_time']:.2f}s)")
-    ax_w_pos.plot(sim_clamped["t"], sim_clamped["y"], color="#2ca02c", lw=2.0, label=f"Clamped Anti-Windup (OS: {m_clamped['overshoot']:.1f}%, $t_s$: {m_clamped['settling_time']:.2f}s)")
+    mask_w = sim_unclamped["t"] <= 4.5
+    ax_w_pos.plot(sim_unclamped["t"][mask_w], sim_unclamped["y"][mask_w], color="#d62728", lw=1.8, label=f"Unclamped (OS: {m_unclamped['overshoot']:.1f}%, $t_s$: {m_unclamped['settling_time']:.2f}s)")
+    ax_w_pos.plot(sim_clamped["t"][mask_w], sim_clamped["y"][mask_w], color="#2ca02c", lw=2.0, label=f"Clamped Anti-Windup (OS: {m_clamped['overshoot']:.1f}%, $t_s$: {m_clamped['settling_time']:.2f}s)")
     ax_w_pos.set_ylabel("Position $x(t)$ (m)")
     ax_w_pos.set_title("Figure 11. Actuator Saturation & Anti-Windup Clamping (30 N Motor Limit)", fontsize=10.5, weight="bold")
     ax_w_pos.legend(loc="lower right", fontsize=8.0)
@@ -75,8 +76,8 @@ def run_section_7():
     ax_w_pos.set_ylim(-0.05, 1.35)
 
     # Force
-    ax_w_force.plot(sim_unclamped["t"], sim_unclamped["u"], color="#d62728", lw=1.6, label="Unclamped Force $u(t)$")
-    ax_w_force.plot(sim_clamped["t"], sim_clamped["u"], color="#2ca02c", lw=1.8, label="Clamped Force $u(t)$")
+    ax_w_force.plot(sim_unclamped["t"][mask_w], sim_unclamped["u"][mask_w], color="#d62728", lw=1.6, label="Unclamped Force $u(t)$")
+    ax_w_force.plot(sim_clamped["t"][mask_w], sim_clamped["u"][mask_w], color="#2ca02c", lw=1.8, label="Clamped Force $u(t)$")
     ax_w_force.axhline(30.0, color="k", linestyle="-.", lw=1.2, label=r"Force Limit ($\pm 30$ N)")
     ax_w_force.axhline(-30.0, color="k", linestyle="-.", lw=1.2)
     ax_w_force.axhline(20.0, color="#1c6b1c", linestyle=":", lw=1.0, label="20 N Holding Force")
@@ -85,8 +86,8 @@ def run_section_7():
     ax_w_force.set_ylim(-35, 35)
 
     # Integrator State
-    ax_w_int.plot(sim_unclamped["t"], sim_unclamped["i"], color="#d62728", lw=1.6, label="Unclamped Integrator $u_I = K_i \\int e$ (Blowup)")
-    ax_w_int.plot(sim_clamped["t"], sim_clamped["i"], color="#2ca02c", lw=1.8, label="Clamped Integrator $u_I$ (Bounded)")
+    ax_w_int.plot(sim_unclamped["t"][mask_w], sim_unclamped["i"][mask_w], color="#d62728", lw=1.6, label=r"Unclamped Integrator $u_I = K_i \int e$ (Blowup)")
+    ax_w_int.plot(sim_clamped["t"][mask_w], sim_clamped["i"][mask_w], color="#2ca02c", lw=1.8, label="Clamped Integrator $u_I$ (Bounded)")
     ax_w_int.axhline(20.0, color="#1c6b1c", linestyle=":", lw=1.2, label="Target 20 N")
     ax_w_int.set_xlabel("Time (s)")
     ax_w_int.set_ylabel("Integral Term (N)")
@@ -104,19 +105,19 @@ def run_section_7():
 
     # 1. Raw D (tau = 0.0)
     ctrl_raw = PID(kp=300.0, ki=300.0, kd=30.0, dt=0.001, d_filter_tau=0.0)
-    sim_raw = simulate(plant_noise, ctrl_raw, setpoint=1.0, T=3.0, dt_sim=0.001, noise_sigma=sigma_noise, seed=42)
-    # Steady state interval [1.5, 3.0] s
-    steady_mask = sim_raw["t"] >= 1.5
+    sim_raw = simulate(plant_noise, ctrl_raw, setpoint=1.0, T=15.0, dt_sim=0.001, noise_sigma=sigma_noise, seed=42)
+    # Steady state interval [2.0, 15.0] s
+    steady_mask = sim_raw["t"] >= 2.0
     std_u_raw = float(np.std(sim_raw["u"][steady_mask]))
 
     # 2. Filtered D (tau = 0.02 s)
     ctrl_f02 = PID(kp=300.0, ki=300.0, kd=30.0, dt=0.001, d_filter_tau=0.02)
-    sim_f02 = simulate(plant_noise, ctrl_f02, setpoint=1.0, T=3.0, dt_sim=0.001, noise_sigma=sigma_noise, seed=42)
+    sim_f02 = simulate(plant_noise, ctrl_f02, setpoint=1.0, T=15.0, dt_sim=0.001, noise_sigma=sigma_noise, seed=42)
     std_u_f02 = float(np.std(sim_f02["u"][steady_mask]))
 
     # 3. Filtered D (tau = 0.05 s)
     ctrl_f05 = PID(kp=300.0, ki=300.0, kd=30.0, dt=0.001, d_filter_tau=0.05)
-    sim_f05 = simulate(plant_noise, ctrl_f05, setpoint=1.0, T=3.0, dt_sim=0.001, noise_sigma=sigma_noise, seed=42)
+    sim_f05 = simulate(plant_noise, ctrl_f05, setpoint=1.0, T=15.0, dt_sim=0.001, noise_sigma=sigma_noise, seed=42)
     std_u_f05 = float(np.std(sim_f05["u"][steady_mask]))
 
     # Theory: Kd * sqrt(2) * sigma / dt
@@ -234,29 +235,77 @@ def run_section_7():
     )
     ax_s_pos.axhline(1.0, color=COLOR_SETPOINT, linestyle="--", lw=1.5, label="Target (1.0 m)")
 
-    # Bisection search for critical instability period where overshoot > 100% or unbounded
-    def test_stability_at_dt(dt_c):
+    # Bisection search for critical sampling instability threshold
+    # Criterion 1 (Standard): 30 s horizon, max |y - 1| over last 5 s is below 0.05 m (settled within 5% band)
+    def test_stability_30s(dt_c):
+        p = MassSpringDamper(m=1.0, c=10.0, k=20.0)
+        c = PID(kp=300.0, ki=300.0, kd=30.0, dt=dt_c)
+        s = simulate(p, c, setpoint=1.0, T=30.0, dt_sim=0.001, dt_ctrl=dt_c)
+        return float(np.max(np.abs(s["y"][-5000:] - 1.0))) < 0.05
+
+    # Criterion 2: 10 s horizon, max |y - 1| over last 2 s is below 0.05 m
+    def test_stability_10s(dt_c):
+        p = MassSpringDamper(m=1.0, c=10.0, k=20.0)
+        c = PID(kp=300.0, ki=300.0, kd=30.0, dt=dt_c)
+        s = simulate(p, c, setpoint=1.0, T=10.0, dt_sim=0.001, dt_ctrl=dt_c)
+        return float(np.max(np.abs(s["y"][-2000:] - 1.0))) < 0.05
+
+    # Criterion 3: Short-term transient peak (3 s horizon peak < 2.5 m)
+    def test_transient_blowup_3s(dt_c):
         p = MassSpringDamper(m=1.0, c=10.0, k=20.0)
         c = PID(kp=300.0, ki=300.0, kd=30.0, dt=dt_c)
         s = simulate(p, c, setpoint=1.0, T=3.0, dt_sim=0.001, dt_ctrl=dt_c)
-        return np.max(s["y"]) < 2.5
+        return float(np.max(s["y"])) < 2.5
 
-    # Bisection between 50 ms and 120 ms
-    low_dt = 0.050
-    high_dt = 0.120
-    for _ in range(12):
-        mid_dt = (low_dt + high_dt) / 2.0
-        if test_stability_at_dt(mid_dt):
-            low_dt = mid_dt
-        else:
-            high_dt = mid_dt
-    critical_dt_ms = low_dt * 1000.0
+    def bisect_fn(fn, low=0.040, high=0.100, n_iter=16):
+        for _ in range(n_iter):
+            mid = (low + high) / 2.0
+            if fn(mid):
+                low = mid
+            else:
+                high = mid
+        return low
+
+    crit_30s_dt = bisect_fn(test_stability_30s) * 1000.0
+    crit_10s_dt = bisect_fn(test_stability_10s) * 1000.0
+    crit_3s_peak_dt = bisect_fn(test_transient_blowup_3s) * 1000.0
+
+    print(f"Sampling Thresholds Measured:")
+    print(f"  - 30s horizon (last 5s |y-1| < 0.05m): {crit_30s_dt:.1f} ms")
+    print(f"  - 10s horizon (last 2s |y-1| < 0.05m): {crit_10s_dt:.1f} ms")
+    print(f"  - 3s horizon (short-term peak < 2.5m): {crit_3s_peak_dt:.1f} ms")
+
+    # Save detailed threshold analysis file
+    threshold_md = [
+        "# Section 7(d): Slow Sampling Instability Threshold Analysis",
+        "",
+        "## Summary of Measured Thresholds",
+        f"- **Strict Settling Criterion (30 s horizon, last 5 s max |y - 1| < 0.05 m):** **{crit_30s_dt:.1f} ms**",
+        f"- **Medium Settling Criterion (10 s horizon, last 2 s max |y - 1| < 0.05 m):** **{crit_10s_dt:.1f} ms**",
+        f"- **Short-Term Peak Divergence Criterion (3 s horizon peak < 2.5 m):** **{crit_3s_peak_dt:.1f} ms**",
+        "",
+        "## Stability Threshold Range",
+        f"The stability limit lies in the range **{crit_10s_dt:.1f} ms to {crit_30s_dt:.1f} ms** for asymptotic convergence within ±5% error.",
+        f"If stability is defined as preventing immediate explosive divergence within the first 3 seconds, the threshold extends to **{crit_3s_peak_dt:.1f} ms**.",
+        "",
+        "## Physical Mechanism & Figure Caption",
+        "> **Figure 14 Caption:** Controller Sampling Rate Degradation under Zero-Order Hold (ZOH).",
+        r"> Stepping the plant at $\Delta t_{\text{sim}} = 1$ ms while evaluating the PID controller every $\Delta t_{\text{ctrl}}$",
+        r"> introduces effective phase delay $\theta_{\text{lag}} \approx \omega \cdot \frac{\Delta t_{\text{ctrl}}}{2}$.",
+        r"> The system response remains virtually indistinguishable from continuous time for $\Delta t_{\text{ctrl}} \le 20$ ms (overshoot increases only from 4.3% to 6.8%).",
+        r"> At $\Delta t_{\text{ctrl}} = 50$ ms, noticeable phase lag increases overshoot to 17.5%.",
+        f"> The critical stability boundary occurs at **$\\Delta t_{{crit}} \\approx {crit_30s_dt:.1f}$ ms** (30 s horizon, 5% settling band).",
+        f"> Above {crit_3s_peak_dt:.1f} ms, phase margin drops to zero, and updates at 90–100 ms cause violent numerical and physical divergence.",
+    ]
+    with open("results/s07d_threshold.md", "w") as f:
+        f.write("\n".join(threshold_md) + "\n")
+    print("Saved: results/s07d_threshold.md")
 
     t04_entries.append({
         "problem": "Slow Controller Sampling",
         "metric": "Stability Limit Δt_crit",
-        "before": f"100 ms update: Diverges / violent instability",
-        "after": f"Stable for Δt ≤ {critical_dt_ms:.1f} ms; identical up to 20 ms",
+        "before": "100 ms update: Diverges / violent instability",
+        "after": f"Stable for Δt ≤ {crit_30s_dt:.1f} ms (Range: {crit_10s_dt:.0f}-{crit_30s_dt:.0f} ms; identical up to 20 ms)",
         "mechanism": "Zero-order hold introduces phase lag ~ω·dt/2, reducing phase margin to zero.",
     })
 
@@ -269,7 +318,7 @@ def run_section_7():
         ax_s_force.plot(sim_dt["t"], sim_dt["u"], color=col, lw=1.4)
 
     ax_s_pos.set_ylabel("Displacement $x(t)$ (m)")
-    ax_s_pos.set_title(f"Figure 14. Controller Sampling Rate Degradation (Critical Stability Limit: $\\Delta t_{{crit}} \\approx {critical_dt_ms:.1f}$ ms)",
+    ax_s_pos.set_title(f"Figure 14. Controller Sampling Rate Degradation (Critical Stability Limit: $\\Delta t_{{crit}} \\approx {crit_30s_dt:.1f}$ ms)",
                        fontsize=10.5, weight="bold")
     ax_s_pos.legend(loc="upper right", fontsize=7.8)
     ax_s_pos.set_xlim(0, 3.0)

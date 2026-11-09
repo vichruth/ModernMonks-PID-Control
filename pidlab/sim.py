@@ -14,7 +14,7 @@ def simulate(
     plant: Any,
     controller: Any,
     setpoint: Union[float, Callable[[float], float], np.ndarray],
-    T: float,
+    T: float = 15.0,
     dt_sim: float = 0.001,
     dt_ctrl: float = None,
     noise_sigma: float = 0.0,
@@ -26,7 +26,7 @@ def simulate(
         plant: Dynamic model with .step(u, dt), .reset(), and .output
         controller: PID controller with .update(r, y), .reset()
         setpoint: Constant scalar, time-varying function r(t), or trajectory array
-        T: Total simulation duration in seconds
+        T: Total simulation duration in seconds (default 15.0 s)
         dt_sim: Plant integration step size (default 1 ms = 0.001 s)
         dt_ctrl: Controller update period (default None -> dt_sim). If > dt_sim,
                  simulates slower digital controller via Zero-Order Hold.

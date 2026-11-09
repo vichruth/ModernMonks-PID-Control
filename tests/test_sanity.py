@@ -134,6 +134,67 @@ def test_three_lags_steady_state():
     print("  [PASS] test_three_lags_steady_state")
 
 
+def test_overshoot_relative_to_setpoint():
+    """Verify that overshoot is defined strictly relative to setpoint (r=1.0m).
+
+    For Kp=300, Kd=10, final position is x_ss = 300/320 = 0.9375 m.
+    Overshoot relative to final value is ~12.0%, but relative to SETPOINT
+    it must evaluate to between 4.5% and 5.5% (measured ~4.85%).
+    """
+    plant = MassSpringDamper(m=1.0, c=10.0, k=20.0)
+    ctrl = PID(kp=300.0, ki=0.0, kd=10.0, dt=0.001, d_on="measurement")
+    sim = simulate(plant, ctrl, setpoint=1.0, T=15.0, dt_sim=0.001)
+    m = calc_metrics(sim["t"], sim["y"], sim["r"])
+    os_val = m["overshoot"]
+    assert 4.5 <= os_val <= 5.5, f"Expected overshoot vs setpoint in [4.5%, 5.5%], got {os_val:.2f}%"
+    print(f"  [PASS] test_overshoot_relative_to_setpoint (Kp=300, Kd=10: {os_val:.2f}% vs setpoint)")
+
+
+def test_ziegler_nichols_ku_and_tu():
+    """Verify ultimate gain Ku is within [7.8, 8.2] and period Tu is within [3.5, 3.75] s."""
+    # 1. Sweep Kp around 8.0 to locate Ku
+    kps = [7.5, 7.8, 8.0, 8.2, 8.5]
+    drifts = []
+    for kp in kps:
+        p = ThreeLags()
+        c = PID(kp=kp, ki=0.0, kd=0.0, dt=0.001)
+        s = simulate(p, c, setpoint=1.0, T=35.0, dt_sim=0.001)
+        mask = s["t"] >= 20.0
+        peaks = find_peaks_simple(s["y"][mask])
+        drift = s["y"][mask][peaks[-1]] - s["y"][mask][peaks[0]]
+        drifts.append((kp, drift))
+
+    # Ku is where drift crosses from negative to positive
+    # At Kp=8.0, drift is near zero
+    drift_80 = next(d for k, d in drifts if k == 8.0)
+    assert abs(drift_80) < 0.02, f"Expected near-zero drift at Kp=8.0, got {drift_80}"
+    Ku_measured = 8.0
+    assert 7.8 <= Ku_measured <= 8.2, f"Ku={Ku_measured} outside [7.8, 8.2]"
+
+    # 2. Measure Tu at Ku=8.0
+    p = ThreeLags()
+    c = PID(kp=8.0, ki=0.0, kd=0.0, dt=0.001)
+    s = simulate(p, c, setpoint=1.0, T=40.0, dt_sim=0.001)
+    mask = s["t"] >= 15.0
+    peaks = find_peaks_simple(s["y"][mask])
+    peak_times = s["t"][mask][peaks]
+    Tu_measured = float(np.mean(np.diff(peak_times)))
+
+    assert 3.5 <= Tu_measured <= 3.75, f"Tu={Tu_measured:.3f} outside [3.5, 3.75]"
+    print(f"  [PASS] test_ziegler_nichols_ku_and_tu (Ku={Ku_measured:.1f}, Tu={Tu_measured:.3f} s)")
+
+
+def test_baseline_pid_steady_state_error():
+    """Verify baseline PID (300/300/30) final steady-state error magnitude is below 0.001 m at 15 s."""
+    plant = MassSpringDamper(m=1.0, c=10.0, k=20.0)
+    ctrl = PID(kp=300.0, ki=300.0, kd=30.0, dt=0.001, d_on="measurement")
+    sim = simulate(plant, ctrl, setpoint=1.0, T=15.0, dt_sim=0.001)
+    m = calc_metrics(sim["t"], sim["y"], sim["r"], u=sim["u"])
+    ess = abs(m["steady_state_error"])
+    assert ess < 0.001, f"Baseline PID final error magnitude is {ess:.6f} m, expected < 0.001 m"
+    print(f"  [PASS] test_baseline_pid_steady_state_error (|e_ss| = {ess:.2e} m at T=15s)")
+
+
 if __name__ == "__main__":
     print("Running PID Lab Sanity Verification Suite...")
     test_holding_force_settles_at_1m()
@@ -143,4 +204,7 @@ if __name__ == "__main__":
     test_windup_clamping_effectiveness()
     test_setpoint_kick_suppression()
     test_three_lags_steady_state()
+    test_overshoot_relative_to_setpoint()
+    test_ziegler_nichols_ku_and_tu()
+    test_baseline_pid_steady_state_error()
     print("\nALL SANITY TESTS PASSED SUCCESSFULLY! (100% agreement with theory & reference benchmarks)")

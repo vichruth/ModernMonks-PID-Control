@@ -1,6 +1,6 @@
 # Table 1: Proportional-Only Controller Performance Sweep
 
-Plant parameters: $m = 1.0$ kg, $c = 10.0$ Ns/m, $k = 20.0$ N/m. Setpoint $r = 1.0$ m.
+Plant parameters: $m = 1.0$ kg, $c = 10.0$ Ns/m, $k = 20.0$ N/m. Setpoint $r = 1.0$ m. Horizon $T = 15.0$ s.
 
 | $K_p$ (N/m) | Steady-State Error $e_{ss}$ | Final Value $x_{ss}$ | Overshoot (%) | Rise Time (s) | Settling Time (s) | Peak Force (N) |
 |---|---|---|---|---|---|---|
