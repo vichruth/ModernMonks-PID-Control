@@ -147,7 +147,8 @@ def run_section_7():
 
     # Zoomed force at steady state (t in [2.0, 2.3] s)
     zoom_mask = (sim_raw["t"] >= 2.0) & (sim_raw["t"] <= 2.3)
-    ax_n_zoom.plot(sim_raw["t"][zoom_mask], sim_raw["u"][zoom_mask], color="#d62728", lw=1.0, alpha=0.85, label="Raw D (42.4 N RMS noise swings)")
+    ax_n_zoom.plot(sim_raw["t"][zoom_mask], sim_raw["u"][zoom_mask], color="#d62728", lw=1.0, alpha=0.85,
+                   label=f"Raw D (std: {std_u_raw:.2f} N; theory: {theory_noise_std:.1f} N)")
     ax_n_zoom.plot(sim_f02["t"][zoom_mask], sim_f02["u"][zoom_mask], color="#1f77b4", lw=1.6, label="Filtered $\\tau=0.02$ s (Smooth)")
     ax_n_zoom.plot(sim_f05["t"][zoom_mask], sim_f05["u"][zoom_mask], color="#2ca02c", lw=1.8, label="Filtered $\\tau=0.05$ s (Ultra-smooth)")
     ax_n_zoom.axhline(20.0, color="k", linestyle=":", lw=1.0)
@@ -223,11 +224,25 @@ def run_section_7():
     # =========================================================================
     dt_ctrl_list = [0.001, 0.020, 0.050, 0.090]
     dt_colors = ["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728"]
+
+    dt_sims = {}
+    dt_metrics = {}
+    for dt_c in dt_ctrl_list:
+        plant_dt = MassSpringDamper(m=1.0, c=10.0, k=20.0)
+        ctrl_dt = PID(kp=300.0, ki=300.0, kd=30.0, dt=dt_c)
+        sim_dt = simulate(plant_dt, ctrl_dt, setpoint=1.0, T=3.0, dt_sim=0.001, dt_ctrl=dt_c)
+        dt_sims[dt_c] = sim_dt
+        dt_metrics[dt_c] = calc_metrics(sim_dt["t"], sim_dt["y"], sim_dt["r"], u=sim_dt["u"])
+
+    os_1ms = dt_metrics[0.001]["overshoot"]
+    os_20ms = dt_metrics[0.020]["overshoot"]
+    os_50ms = dt_metrics[0.050]["overshoot"]
+
     labels_dt = [
-        r"$\Delta t_{ctrl} = 1$ ms (Continuous-like, OS: 4.3%)",
-        r"$\Delta t_{ctrl} = 20$ ms (Stable & smooth, OS: 6.8%)",
-        r"$\Delta t_{ctrl} = 50$ ms (Laggy, OS: 17.5%)",
-        r"$\Delta t_{ctrl} = 90$ ms (Severe Instability / Divergence)",
+        rf"$\Delta t_{{ctrl}} = 1$ ms (Continuous-like, OS: {os_1ms:.2f}%)",
+        rf"$\Delta t_{{ctrl}} = 20$ ms (Stable & smooth, OS: {os_20ms:.2f}%)",
+        rf"$\Delta t_{{ctrl}} = 50$ ms (Laggy, OS: {os_50ms:.2f}%)",
+        rf"$\Delta t_{{ctrl}} = 90$ ms (Diverges, peak {dt_metrics[0.090]['peak_y']:.1f} m at 3 s)",
     ]
 
     fig_f14, (ax_s_pos, ax_s_force) = plt.subplots(
@@ -270,10 +285,30 @@ def run_section_7():
     crit_10s_dt = bisect_fn(test_stability_10s) * 1000.0
     crit_3s_peak_dt = bisect_fn(test_transient_blowup_3s) * 1000.0
 
+    # 60 s run regime verification (stable <= 60 ms, growing at 62 ms, exploding >= 64 ms)
+    def classify_60s(dt_c):
+        p = MassSpringDamper(m=1.0, c=10.0, k=20.0)
+        c = PID(kp=300.0, ki=300.0, kd=30.0, dt=dt_c)
+        s = simulate(p, c, setpoint=1.0, T=60.0, dt_sim=0.001, dt_ctrl=dt_c)
+        e_mid = float(np.max(np.abs(s["y"][(s["t"] >= 20.0) & (s["t"] < 40.0)] - 1.0)))
+        e_end = float(np.max(np.abs(s["y"][s["t"] >= 40.0] - 1.0)))
+        if e_end > 100.0 or not np.isfinite(e_end):
+            return "exploding"
+        if e_end <= e_mid:
+            return "stable"
+        return "growing"
+
+    lbl_60 = classify_60s(0.060)
+    lbl_62 = classify_60s(0.062)
+    lbl_64 = classify_60s(0.064)
+
+    print(f"F12 Raw D Noise std(u): {std_u_raw:.2f} N (Theory: {theory_noise_std:.1f} N)")
+    print(f"F14 Slow Sampling Overshoots: 1ms={os_1ms:.2f}%, 20ms={os_20ms:.2f}%, 50ms={os_50ms:.2f}%, 90ms peak={dt_metrics[0.090]['peak_y']:.1f}m")
     print(f"Sampling Thresholds Measured:")
     print(f"  - 30s horizon (last 5s |y-1| < 0.05m): {crit_30s_dt:.1f} ms")
     print(f"  - 10s horizon (last 2s |y-1| < 0.05m): {crit_10s_dt:.1f} ms")
-    print(f"  - 3s horizon (short-term peak < 2.5m): {crit_3s_peak_dt:.1f} ms")
+    print(f"  - 3s horizon ({crit_3s_peak_dt:.1f} ms: a 3 s test overestimates the limit)")
+    print(f"  - 60s regime labels: 60ms={lbl_60}, 62ms={lbl_62}, 64ms={lbl_64}")
 
     # Save detailed threshold analysis file
     threshold_md = [
@@ -282,20 +317,21 @@ def run_section_7():
         "## Summary of Measured Thresholds",
         f"- **Strict Settling Criterion (30 s horizon, last 5 s max |y - 1| < 0.05 m):** **{crit_30s_dt:.1f} ms**",
         f"- **Medium Settling Criterion (10 s horizon, last 2 s max |y - 1| < 0.05 m):** **{crit_10s_dt:.1f} ms**",
-        f"- **Short-Term Peak Divergence Criterion (3 s horizon peak < 2.5 m):** **{crit_3s_peak_dt:.1f} ms**",
+        f"- **Short-Term Check (3 s horizon peak < 2.5 m):** **{crit_3s_peak_dt:.1f} ms** (a 3 s test overestimates the limit)",
         "",
-        "## Stability Threshold Range",
-        f"The stability limit lies in the range **{crit_10s_dt:.1f} ms to {crit_30s_dt:.1f} ms** for asymptotic convergence within ±5% error.",
-        f"If stability is defined as preventing immediate explosive divergence within the first 3 seconds, the threshold extends to **{crit_3s_peak_dt:.1f} ms**.",
+        "## Stability Regimes Over a 60 s Run",
+        f"The stability limit lies in the range **{crit_10s_dt:.1f} ms to {crit_30s_dt:.1f} ms** for convergence within ±5% error.",
+        "Because this closed loop is linear with no saturation, losing stability above 60 ms produces slowly growing oscillation rather than a limit cycle.",
+        f"Measured labels from a 60 s run: **{lbl_60} up to 60 ms, {lbl_62} at 62 ms, {lbl_64} from 64 ms**.",
         "",
         "## Physical Mechanism & Figure Caption",
         "> **Figure 14 Caption:** Controller Sampling Rate Degradation under Zero-Order Hold (ZOH).",
         r"> Stepping the plant at $\Delta t_{\text{sim}} = 1$ ms while evaluating the PID controller every $\Delta t_{\text{ctrl}}$",
         r"> introduces effective phase delay $\theta_{\text{lag}} \approx \omega \cdot \frac{\Delta t_{\text{ctrl}}}{2}$.",
-        r"> The system response remains virtually indistinguishable from continuous time for $\Delta t_{\text{ctrl}} \le 20$ ms (overshoot increases only from 4.3% to 6.8%).",
-        r"> At $\Delta t_{\text{ctrl}} = 50$ ms, noticeable phase lag increases overshoot to 17.5%.",
-        f"> The critical stability boundary occurs at **$\\Delta t_{{crit}} \\approx {crit_30s_dt:.1f}$ ms** (30 s horizon, 5% settling band).",
-        f"> Above {crit_3s_peak_dt:.1f} ms, phase margin drops to zero, and updates at 90–100 ms cause violent numerical and physical divergence.",
+        f"> The system response remains nearly identical to continuous time for $\\Delta t_{{\\text{{ctrl}}}} \\le 20$ ms (overshoot shifts slightly from {os_1ms:.2f}% at 1 ms to {os_20ms:.2f}% at 20 ms).",
+        f"> At $\\Delta t_{{\\text{{ctrl}}}} = 50$ ms, noticeable phase lag increases overshoot to {os_50ms:.2f}%.",
+        f"> The critical stability boundary occurs at **$\\Delta t_{{crit}} \\approx {crit_30s_dt:.1f}$ ms** (30 s horizon, 5% settling band); over a 60 s run the response is {lbl_60} up to 60 ms, {lbl_62} at 62 ms, and {lbl_64} from 64 ms.",
+        "> A 3 s test overestimates the limit at 66.5 ms because slowly growing oscillations take longer than 3 s to diverge violently, while updates at 90–100 ms explode immediately.",
     ]
     with open("results/s07d_threshold.md", "w") as f:
         f.write("\n".join(threshold_md) + "\n")
@@ -310,10 +346,7 @@ def run_section_7():
     })
 
     for dt_c, col, lbl in zip(dt_ctrl_list, dt_colors, labels_dt):
-        plant_dt = MassSpringDamper(m=1.0, c=10.0, k=20.0)
-        ctrl_dt = PID(kp=300.0, ki=300.0, kd=30.0, dt=dt_c)
-        sim_dt = simulate(plant_dt, ctrl_dt, setpoint=1.0, T=3.0, dt_sim=0.001, dt_ctrl=dt_c)
-
+        sim_dt = dt_sims[dt_c]
         ax_s_pos.plot(sim_dt["t"], sim_dt["y"], color=col, lw=1.8, label=lbl)
         ax_s_force.plot(sim_dt["t"], sim_dt["u"], color=col, lw=1.4)
 

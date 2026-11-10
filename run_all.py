@@ -1,14 +1,16 @@
-"""Master Pipeline Runner (Step 1 & Step 2).
+"""Master Pipeline Runner.
 
-Re-generates all experimental figures and verification checks for Day 1 (Sections 1-4).
+Runs the sanity verification suite, regenerates all experimental figures (F01-F17)
+and benchmark tables, and compiles report/PID_Control_Guide.pdf when pdflatex is available.
 
 Usage:
     python3 run_all.py
 """
 
-import sys
 import os
+import shutil
 import subprocess
+import sys
 import time
 
 
@@ -33,7 +35,7 @@ def run_pipeline():
     start_time = time.time()
 
     # 1. Run Sanity Verification Suite
-    print("\n[1/2] Running Physics & Math Assertion Suite (test_sanity.py)...")
+    print("\n[1/3] Running Physics & Math Assertion Suite (tests/test_sanity.py)...")
     result = subprocess.run([sys.executable, "tests/test_sanity.py"], capture_output=True, text=True)
     if result.returncode != 0:
         print("ERROR: Sanity tests failed!")
@@ -41,10 +43,10 @@ def run_pipeline():
         print(result.stderr)
         sys.exit(1)
     else:
-        print("  ✓ All theoretical assertions and reference checks passed.")
+        print("  [PASS] All theoretical assertions and reference checks passed.")
 
     # 2. Execute Experiment Scripts
-    print("\n[2/2] Regenerating All Figures (F01 - F17) and Results Tables (T01 - T06)...")
+    print("\n[2/3] Regenerating All Figures (F01 - F17) and Results Tables...")
     for script, desc in EXPERIMENT_SCRIPTS:
         if os.path.exists(script):
             print(f"  -> Running {script} ({desc})...")
@@ -58,27 +60,42 @@ def run_pipeline():
                     if line:
                         print(f"     {line}")
         else:
-            print(f"  [SKIPPED] {script} (Script not yet created)")
+            print(f"  [SKIPPED] {script} (Script not found)")
 
-    # [3/3] Optional compilation of report/pid_control_guide.pdf
-    if os.path.exists("report/pid_control_guide.tex"):
-        print("\n[3/3] Compiling Publication PDF Guide (report/pid_control_guide.pdf)...")
-        try:
+    # 3. Compile Publication PDF Guide (two passes -> report/PID_Control_Guide.pdf)
+    tex_path = "report/pid_control_guide.tex"
+    tmp_pdf = "report/pid_control_guide.pdf"
+    final_pdf = "report/PID_Control_Guide.pdf"
+
+    print(f"\n[3/3] Compiling Publication PDF Guide ({final_pdf})...")
+    if not os.path.exists(tex_path):
+        print(f"  [SKIPPED] {tex_path} not found; skipping PDF compilation.")
+    elif shutil.which("pdflatex") is None:
+        print(f"  [SKIPPED] pdflatex not found on PATH; skipping PDF compilation ({final_pdf} unchanged).")
+    else:
+        compiled_ok = True
+        for pass_num in (1, 2):
             res = subprocess.run(
-                ["pdflatex", "-interaction=nonstopmode", "-output-directory=report", "report/pid_control_guide.tex"],
+                ["pdflatex", "-interaction=nonstopmode", "-output-directory=report", tex_path],
                 capture_output=True,
-                text=True
+                text=True,
+                errors="replace",
             )
-            if res.returncode == 0:
-                print("  ✓ PDF compiled successfully (15 pages strictly conforming to page budget).")
-            else:
-                print("  ℹ Pre-compiled PDF remains available at report/pid_control_guide.pdf.")
-        except FileNotFoundError:
-            print("  ℹ pdflatex not found on PATH; skipping compilation (pre-compiled PDF provided).")
+            if res.returncode != 0:
+                print(f"  ERROR: pdflatex pass {pass_num} failed with return code {res.returncode}.")
+                compiled_ok = False
+                break
+
+        if compiled_ok and os.path.exists(tmp_pdf):
+            shutil.copy2(tmp_pdf, final_pdf)
+            os.remove(tmp_pdf)
+            print(f"  [PASS] PDF compiled (2 passes) -> {final_pdf} (removed {tmp_pdf}).")
+        elif not compiled_ok:
+            print(f"  [WARN] PDF compilation failed; keeping existing {final_pdf} if present.")
 
     elapsed = time.time() - start_time
     print("\n" + "=" * 65)
-    print(f"  PIPELINE COMPLETE: All 17 figures, tables, and PDF verified in {elapsed:.2f}s")
+    print(f"  PIPELINE COMPLETE: Figures, tables, and checks finished in {elapsed:.2f}s")
     print("=" * 65)
 
 

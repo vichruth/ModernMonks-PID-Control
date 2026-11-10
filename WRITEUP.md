@@ -49,9 +49,9 @@ During systematic benchmarking, three critical discrepancies were uncovered and 
    - *Root Cause:* The continuous spring pull ($20\text{ N}$) requires the integrator to slowly accumulate holding force. Truncating at 3.5 s caught the integrator during its fine asymptotic tail settling.
    - *Resolution:* Increased default simulation horizon to $T = 15.0\text{ s}$ in `sim.py` and experiment scripts. The true steady-state error settled to $0.0000\text{ m}$ ($1.34 \times 10^{-8}\text{ m}$ numerical precision).
 3. **Slow-Sampling Discrepancy & Stability Threshold:**
-   - *Issue:* Short 3 s bisection sweeps evaluating peak divergence reported an instability threshold of $66.5\text{ ms}$, whereas longer runs showed stability loss near $60\text{ ms}$.
-   - *Root Cause:* At $\Delta t_{\text{ctrl}} \in [60\text{ ms}, 66\text{ ms}]$, the system does not diverge instantly; instead, digital sampling phase lag ($\theta_{\text{lag}} \approx \omega \frac{\Delta t}{2}$) slowly destabilizes the loop into sustained or growing limit cycles over 10–30 s.
-   - *Resolution:* Extended bisection horizon to $30\text{ s}$ with a strict 2% settling criterion ($\max |y - 1| < 0.05\text{ m}$ over final 5 s). Pinpointed the precise threshold range ($59.5\text{--}60.5\text{ ms}$) and documented both criteria in `results/s07d_threshold.md`.
+   - *Issue:* A 3 s test overestimates the limit at $66.5\text{ ms}$, whereas longer runs lose stability just above $60\text{ ms}$.
+   - *Root Cause:* The system is linear with no saturation, so digital sampling phase lag ($\theta_{\text{lag}} \approx \omega \frac{\Delta t}{2}$) causes slowly growing oscillation rather than a limit cycle. Over a $60\text{ s}$ run, the response is **stable up to $60\text{ ms}$, growing at $62\text{ ms}$, and exploding from $64\text{ ms}$**.
+   - *Resolution:* Extended bisection horizon to $30\text{ s}$ with a strict 5% settling band criterion ($\max |y - 1| < 0.05\text{ m}$ over final 5 s). Pinpointed the precise threshold range ($59.5\text{--}60.5\text{ ms}$) and documented both criteria in `results/s07d_threshold.md`.
 
 ---
 

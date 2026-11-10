@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from pidlab.plants import ThreeLags
+from pidlab.plants import MassSpringDamper, ThreeLags
 from pidlab.pid import PID
 from pidlab.sim import simulate
 from pidlab.metrics import find_peaks_simple, calc_metrics, format_metrics
@@ -287,6 +287,23 @@ def run_section_8():
     # =========================================================================
     # PART 6: Manual Tuning Recipe Table (results/s08_manual_tuning.md)
     # =========================================================================
+    sim_ki50 = simulate(
+        MassSpringDamper(m=1.0, c=10.0, k=20.0),
+        PID(kp=100.0, ki=50.0, kd=0.0, dt=0.001),
+        setpoint=1.0,
+        T=15.0,
+        dt_sim=0.001,
+    )
+    os_ki50 = calc_metrics(sim_ki50["t"], sim_ki50["y"], sim_ki50["r"])["overshoot"]
+    sim_ki200 = simulate(
+        MassSpringDamper(m=1.0, c=10.0, k=20.0),
+        PID(kp=100.0, ki=200.0, kd=0.0, dt=0.001),
+        setpoint=1.0,
+        T=15.0,
+        dt_sim=0.001,
+    )
+    os_ki200 = calc_metrics(sim_ki200["t"], sim_ki200["y"], sim_ki200["r"])["overshoot"]
+
     recipe_md = [
         "# Section 8: Systematic Manual Tuning Recipe",
         "",
@@ -296,7 +313,7 @@ def run_section_8():
         "| Parameter | Effect on Rise Time | Effect on Overshoot | Effect on Settling Time | Effect on Steady-State Error | Effect on Noise Sensitivity | Measured Evidence from Test System |",
         "|:---:|:---:|:---:|:---:|:---:|:---:|:---|",
         r"| **Increasing $K_p$** | **Decreases** (faster initial response) | **Increases** (drops closed-loop damping $\zeta$) | **Degrades / Prolongs** (oscillations bounce) | **Decreases** (scales as $e_{ss} = \frac{k}{K_p + k}$) | **Minimal direct chatter**, but increases initial force spike $u(0) = K_p \cdot r$ | At $K_p=100$: $t_r = 0.18\text{ s}, e_{ss} = 0.167\text{ m}$. At $K_p=1000$: $t_r = 0.036\text{ s}, \text{OS} = 57.6\%$, spike = $1000\text{ N}$. |",
-        r"| **Increasing $K_i$** | **Slight decrease** (accelerates toward target) | **Increases** (accumulates integrator lag / windup) | **Improves initially**, then **degrades** if too high | **Eliminates entirely** (drives $e_{ss} \to 0.000\text{ m}$) | **Zero chatter** (integrator is a low-pass filter $1/s$) | $K_i=50 \to \text{OS } 0.0\%$. $K_i=200 \to \text{OS } 21.9\%$. Settles holding force to exactly $20.00\text{ N}$. |",
+        f"| **Increasing $K_i$** | **Slight decrease** (accelerates toward target) | **Increases** (accumulates integrator lag / windup) | **Improves initially**, then **degrades** if too high | **Eliminates entirely** (drives $e_{{ss}} \\to 0.000\\text{{ m}}$) | **Zero chatter** (integrator is a low-pass filter $1/s$) | At $K_p=100$: $K_i=50 \\to \\text{{OS }} {os_ki50:.1f}\\%$. $K_i=200 \\to \\text{{OS }} {os_ki200:.1f}\\%$. Settles holding force to exactly $20.00\\text{{ N}}$. |",
         r"| **Increasing $K_d$** | **Increases** (dynamic braking resists motion) | **Decreases dramatically** (quenches bouncing) | **Improves up to $\zeta=1.0$**, then sluggish | **No effect** ($\dot{x} = 0$ at rest) | **Severely increases chatter** ($\text{std}(u) \propto K_d \frac{\sqrt{2}\sigma}{\Delta t}$) | At $K_p=300$: $K_d=0 \to \text{OS } 31.2\%$. $K_d=10 \to \text{OS } 4.85\%$. $K_d=30 \to \text{OS } 0.0\%$. Unfiltered noise chatter = $43.4\text{ N}$. |",
         "",
         "## Step-by-Step Practical Tuning Procedure",

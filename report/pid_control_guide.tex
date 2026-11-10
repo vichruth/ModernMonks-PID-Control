@@ -1,856 +1,276 @@
 \documentclass[10pt,a4paper]{article}
-
-\setlength{\textwidth}{6.95in}
-\setlength{\textheight}{9.70in}
-\setlength{\oddsidemargin}{-0.22in}
-\setlength{\evensidemargin}{-0.22in}
-\setlength{\topmargin}{-0.60in}
-\setlength{\headheight}{12pt}
-\setlength{\headsep}{10pt}
-\setlength{\footskip}{18pt}
-
-% Bullet font compatibility fix (avoids missing TS1 textbullet)
-\renewcommand{\labelitemi}{$\bullet$}
-\renewcommand{\labelitemii}{--}
-\renewcommand{\labelitemiii}{$\ast$}
-\renewcommand{\labelitemiv}{$\cdot$}
-
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=0.8in,top=0.7in,bottom=0.75in]{geometry}
 \usepackage{amsmath,amssymb}
-\usepackage{graphicx}
-\usepackage{xcolor}
-\usepackage{booktabs}
-\usepackage{float}
-\usepackage{verbatim}
-\usepackage{hyperref}
-
+\usepackage{booktabs,array,graphicx,float,xcolor,microtype,enumitem,titlesec,listings,caption,tabularx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
 \graphicspath{{../figures/}{figures/}}
 
-\definecolor{monkdark}{RGB}{20, 24, 35}
-\definecolor{monkblue}{RGB}{31, 119, 180}
-\definecolor{monkgreen}{RGB}{44, 160, 44}
-\definecolor{monkred}{RGB}{214, 39, 40}
-\definecolor{boxbg}{RGB}{242, 246, 250}
+\definecolor{accent}{HTML}{1F4E79}
+\definecolor{boxbg}{HTML}{EEF3F8}
+\titleformat{\section}{\large\bfseries\color{accent}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{9pt}{4pt}
+\titlespacing*{\subsection}{0pt}{6pt}{2pt}
+\setlength{\parskip}{3pt}\setlength{\parindent}{0pt}
+\setlist{nosep,leftmargin=1.4em}
+\captionsetup{font=small,labelfont=bf,skip=3pt}
+\pagestyle{fancy}\fancyhf{}\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\small\thepage}
+\setlength{\textfloatsep}{6pt}\setlength{\floatsep}{5pt}\setlength{\intextsep}{5pt}
 
-\hypersetup{
-    colorlinks=true,
-    linkcolor=monkblue,
-    citecolor=monkblue,
-    urlcolor=monkblue
-}
+\newcommand{\takeaway}[1]{\par\vspace{2pt}\noindent\colorbox{boxbg}{\parbox{\dimexpr\linewidth-2\fboxsep}{\small\textbf{Takeaway.} #1}}\par\vspace{2pt}}
+\newcommand{\fig}[3]{\begin{figure}[H]\centering\includegraphics[width=#2\linewidth]{#1}\caption{#3}\end{figure}}
 
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{3pt plus 1pt minus 1pt}
+\lstset{basicstyle=\ttfamily\fontsize{7.4}{8.8}\selectfont,breaklines=true,showstringspaces=false,frame=single,rulecolor=\color{gray!50},
+ keywordstyle=\color{accent}\bfseries,commentstyle=\color{gray},language=Python,columns=fullflexible,xleftmargin=0pt,framexleftmargin=2pt}
 
-\newcommand{\sechook}[1]{\noindent\textit{\textbf{Analogy \& Physical Hook:}} #1\par\vspace{1pt}}
-\newcommand{\sectakeaway}[1]{\vspace{2pt}\noindent\colorbox{boxbg}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\textbf{Key Engineering Takeaway:} #1}}\vspace{2pt}}
-
+\IfFileExists{../pidlab/pid.py}{\newcommand{\pidpath}{../pidlab/pid.py}}{\newcommand{\pidpath}{pidlab/pid.py}}
 \begin{document}
 
-% =============================================================================
-% PAGE 1: TITLE, ABSTRACT, STATUS & SECTION 1: THE BASIC IDEA
-% =============================================================================
 \begin{center}
-    {\LARGE \textbf{PID Control: Theory, First-Principles Physics, and Industrial Hardening}}\\[0.2em]
-    {\large \textbf{A Complete Beginner-to-Practitioner Engineering Guide}}\\[0.2em]
-    \textbf{Vichruth} \quad $\cdot$ \quad \texttt{hr@modernmonklabs.com} \quad $\cdot$ \quad Modern Monk Labs Technical Assignment
+{\LARGE\bfseries PID Control Explained}\\[3pt]
+{\large Theory, simulation, real-world problems and tuning}\\[4pt]
+Vichruth \quad|\quad Modern Monk Labs Technical Assignment \quad|\quad Code: \texttt{github.com/vichruth/ModernMonks-PID-Control}
 \end{center}
-\vspace{-8pt}
-\hrule
-\vspace{3pt}
+\vspace{-4pt}\hrule\vspace{5pt}
 
-\textbf{Executive Summary:} Feedback control is the foundational mechanism that allows physical machines---from high-speed drone rotors and industrial robotic arms to self-driving steering actuators---to hold precise targets under friction, gravity, aerodynamic drag, and sensor noise. This textbook guide derives, simulates, and benchmarks the ubiquitous Proportional-Integral-Derivative (PID) controller from pure first principles. Without relying on black-box control libraries (\texttt{scipy.signal}, \texttt{control}, or \texttt{simple-pid}), every differential equation is solved using energy-preserving symplectic physics integration ($\Delta t = 1\text{ ms}$). Across ten structured sections, we examine how each term operates in isolation, resolve critical physical bugs (windup, kick, noise amplification, and digital latency), benchmark systematic tuning methods, and evaluate real-world robotic architectures.
+\noindent\textbf{What this document does.} It explains PID control from scratch and backs every claim with a simulation written in plain NumPy and Matplotlib (no control library). The test machine is a 1\,kg block on a spring and damper that must move to 1\,m and stay there. Every figure and number comes from the code in the repository; \texttt{python run\_all.py} regenerates all of them.
 
-\textbf{AI Collaboration Disclosure:} In accordance with Modern Monk Labs submission guidelines, generative AI (Gemini / Claude) was utilized as an interactive pair-programming partner for mathematical verification, scaffolding plotting routines, and proofreading derivations. All differential equations, semi-implicit Euler integration routines, parallel PID controller logic, anti-windup clamping algorithms, and low-pass filter implementations were derived, implemented, tested, and validated independently.
+\noindent\textbf{How I used AI.} I used AI tools (Gemini and Claude) as pair-programming help for code scaffolding, plotting and proofreading, and for an independent review: a second AI re-ran key results with its own simulation and caught several wrong numbers, which are corrected here. Results that matter (e.g.\ the steady-state error formula, damping ratio, Ziegler--Nichols $K_u$ and $T_u$) were also checked against closed-form theory.
 
-\textbf{Status \& Completeness:} All 10 required sections, 17 publication-quality figures, 6 benchmark tables, a 10-test automated sanity suite, and an interactive prediction playground are 100\% complete, verified, and passing.
-
+%==================================================================
 \section{The basic idea}
+Think of adjusting a shower. The water is too cold, so you open the hot tap a lot. As it warms up you open it less. If it gets too hot you close it again. You never ``know'' the right tap position; you keep measuring the gap between what you want and what you have, and you act on that gap. This is \emph{feedback control}.
 
-\sechook{Stepping into a hotel shower with unfamiliar plumbing. If the water comes out ice-cold, you instinctively crank the hot water knob aggressively. As the temperature rises toward your desired comfort zone, you slow down your adjustments, turning the valve by millimeter increments. If someone downstream flushes a toilet, the water abruptly turns scalding; your nervous system detects the spike and immediately jerks the knob in the opposite direction.}
+In engineering words: the \textbf{setpoint} $r$ is the target, the \textbf{plant} is the machine, a \textbf{sensor} measures its output $y$, and the \textbf{error} is
+\begin{equation}e(t)=r(t)-y(t).\end{equation}
+The \textbf{controller} turns the error into a command $u$ (here a force in newtons) for the \textbf{actuator}. Without feedback (``open loop'') the machine just runs a fixed command and cannot react to anything unexpected.
 
-\textbf{Feedback vs. Open-Loop Control:} In an \textit{open-loop} system, a machine blindly executes a pre-programmed command regardless of whether the environment complies (e.g., turning a shower knob to $45^\circ$ and praying the temperature remains comfortable despite water pressure fluctuations). In a \textit{closed-loop} feedback system, the machine continuously observes its current physical state $y(t)$ via a sensor, compares it against the desired setpoint $r(t)$, computes the error $e(t)$, and commands an actuator $u(t)$ to eliminate the discrepancy:
-\begin{equation}
-e(t) = r(t) - y(t)
-\end{equation}
-The core loop operates continuously:
-\begin{center}
-$\mathbf{Target \; r(t)} \longrightarrow \mathbf{Error \; e(t)} \longrightarrow \mathbf{Controller} \longrightarrow \mathbf{Actuator \; u(t)} \longrightarrow \mathbf{Machine/Plant} \longrightarrow \mathbf{Sensor} \longrightarrow \mathbf{Back \; to \; Start}$
-\end{center}
+\fig{fig01_loop_diagram.png}{0.78}{The control loop: target $\to$ error $\to$ controller $\to$ machine $\to$ sensor $\to$ back to the start. The shower analogy is mapped onto each box.}
 
-\begin{figure}[H]
-\centering
-\includegraphics[height=2.8cm,keepaspectratio]{figures/fig01_loop_diagram.png}
-\caption{Figure 1. Closed-loop control architecture and shower temperature analogy. Error guides corrective action.}
-\end{figure}
+\emph{Worked number.} Stepping into the shower at $y=20^\circ$C with a target of $40^\circ$C gives $e=+20^\circ$C, so a big correction. At $39.5^\circ$C the error is $+0.5^\circ$C and almost no correction is needed.
+\takeaway{A controller keeps shrinking the gap between target and reality by acting on the measured error.}
 
-\textbf{Quantitative Insight:} When stepping into the shower at $y = 20^\circ\text{C}$ with a target $r = 40^\circ\text{C}$, the error is $+20^\circ\text{C}$, demanding maximum hot-water valve drive. When the water reaches $39.5^\circ\text{C}$, the error collapses to $+0.5^\circ\text{C}$, commanding negligible further correction. Feedback ensures the system automatically compensates for unseen external disturbances.
-
-\sectakeaway{Feedback control continuously closes the loop between intention and reality by driving corrective action strictly from the observed error.}
-
-\newpage
-% =============================================================================
-% PAGE 2: SECTION 2: THE PID FORMULA
-% =============================================================================
+%==================================================================
 \section{The PID formula}
-
-\sechook{Steering an autonomous cargo ship through a narrow shipping channel. If you steer purely based on your current cross-track distance from the channel centerline, a sustained lateral crosswind will continuously push the ship off course. To stay centered, a seasoned navigator combines three perspectives: how far off-center you are right now (Present), how long you have been drifting leeward (Past), and how fast you are closing in on the rocky shore (Future).}
-
-\textbf{Continuous Mathematical Formulation:} The parallel-form PID controller computes actuator command force $u(t)$ by summing three distinct operations on the error signal:
+A PID controller adds up three reactions to the error:
 \begin{equation}
-u(t) = \underbrace{K_p \, e(t)}_{\text{P: Present Error}} + \underbrace{K_i \int_{0}^{t} e(\tau) \, d\tau}_{\text{I: Past Accumulated Error}} + \underbrace{K_d \, \frac{de(t)}{dt}}_{\text{D: Future Rate of Change}}
+u(t)=\underbrace{K_p\,e(t)}_{\text{P: present error}}+\underbrace{K_i\!\int_0^t e(\tau)\,d\tau}_{\text{I: accumulated past error}}+\underbrace{K_d\,\frac{de(t)}{dt}}_{\text{D: current rate of change}}
 \end{equation}
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}l l l X@{}}
+\toprule Symbol & Name & Unit & Meaning\\\midrule
+$r,\;y,\;e$ & setpoint, output, error & m & target position, measured position, $r-y$\\
+$u$ & control force & N & what the actuator pushes with\\
+$K_p$ & proportional gain & N/m & like a spring: push proportional to how far away you are\\
+$K_i$ & integral gain & N/(m$\cdot$s) & memory: keeps growing the push while any error remains\\
+$K_d$ & derivative gain & N$\cdot$s/m & like a damper: pushes against fast motion, braking the approach\\
+\bottomrule\end{tabularx}\end{center}
 
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lllp{9.6cm}}
-\toprule
-\textbf{Symbol} & \textbf{Name} & \textbf{Physical Units} & \textbf{Engineering Function \& Physical Intuition} \\
-\midrule
-$r(t)$ & Target Setpoint & $\text{m}$ & Desired physical position, velocity, or temperature set by user or trajectory planner. \\
-$y(t)$ & Plant Output & $\text{m}$ & Current measured physical state reported by sensor (encoder, IMU, thermocouple). \\
-$e(t)$ & Tracking Error & $\text{m}$ & Discrepancy between command and reality: $e(t) = r(t) - y(t)$. \\
-$u(t)$ & Control Effort & $\text{N}$ & Physical effort applied by actuator (motor force, valve torque, PWM drive). \\
-$K_p$ & Proportional Gain & $\text{N/m}$ & \textbf{Virtual Spring:} Pulls proportional to distance; provides immediate stiffness. \\
-$K_i$ & Integral Gain & $\text{N/(m}\cdot\text{s)}$ & \textbf{Force Memory:} Accumulates past offset; builds steady holding force. \\
-$K_d$ & Derivative Gain & $\text{N}\cdot\text{s/m}$ & \textbf{Virtual Damper:} Resists rate of change; injects aerodynamic-like braking. \\
-\bottomrule
-\end{tabular}
-\end{table}
+\textbf{Plain-words meaning.} P reacts to \emph{how big} the error is now. I reacts to \emph{how long} it has been there. D reacts to \emph{how fast} the error is changing, so it brakes when the target is approached quickly. D does not see the future: it reacts to the current slope, which hints at where the error is heading.
 
-\textbf{Discrete Digital Computer Algorithm:} Real physical microcontrollers cannot perform continuous calculus; they sample sensors at discrete intervals $\Delta t$. In discrete time step $k$, the computer calculates:
+\textbf{What a computer actually does.} It samples every $\Delta t$ (1\,ms here) and repeats:
 \begin{align}
-e_k &= r_k - y_k \quad &&\text{[Current sample error]} \\
-P_k &= K_p \cdot e_k \quad &&\text{[Proportional force: instant reaction]} \\
-I_k &= I_{k-1} + K_i \cdot e_k \cdot \Delta t \quad &&\text{[Integral accumulator: Riemann sum memory]} \\
-D_k &= K_d \cdot \frac{e_k - e_{k-1}}{\Delta t} \quad &&\text{[Derivative difference: velocity damping]} \\
-u_k &= P_k + I_k + D_k \quad &&\text{[Total actuator command force]}
+e_k &= r_k-y_k & I_k &= I_{k-1}+K_i\,e_k\,\Delta t\\
+P_k &= K_p\,e_k & D_k &= K_d\,\frac{e_k-e_{k-1}}{\Delta t},\qquad u_k=P_k+I_k+D_k
 \end{align}
+At $t=0$ the setpoint steps from 0 to 1\,m, so $P(0)=K_p\cdot 1$\,N; the integral starts at 0 and grows at $K_i\cdot1$\,N/s; $D$ appears only once the block moves.
 
-\begin{figure}[H]
-\centering
-\includegraphics[height=3.3cm,keepaspectratio]{figures/fig02_pid_terms.png}
-\caption{Figure 2. Discrete and continuous PID term decomposition. Total force balances present, past, and rate-of-change.}
-\end{figure}
+\fig{fig02_pid_terms.png}{0.55}{Top: the error shrinking over time. Middle: the separate P, I and D forces. Bottom: their sum, the force actually applied.}
+\takeaway{P acts on the present, I on the past, D on the trend. The sum of the three is the force.}
 
-\textbf{Quantitative Dynamics:} At $t = 0$, when the setpoint steps from $0 \to 1\text{ m}$, the error instantaneously jumps to $1.0\text{ m}$, creating a proportional thrust $P(0) = K_p \cdot 1.0\text{ N}$. The integral term starts at $0\text{ N}$ and grows linearly at initial slope $K_i \cdot 1.0\text{ N/s}$. As the plant moves and error shrinks, $P(t)$ drops, while $I(t)$ sustains the holding effort.
-
-\sectakeaway{PID unites the triad of time: Proportional acts on the present, Integral cures the past, and Derivative anticipates the future.}
-
-\newpage
-% =============================================================================
-% PAGE 3: SECTIONS 3 & 4: TEST SYSTEM & METRICS
-% =============================================================================
+%==================================================================
 \section{The test system (given)}
+A block of mass $m=1$\,kg sits on a spring ($k=20$\,N/m) with a damper ($c=10$\,N$\cdot$s/m). With force $u$:
+\begin{equation}m\ddot x+c\dot x+kx=u.\end{equation}
+The open-loop damping ratio is $\zeta=c/(2\sqrt{mk})=10/(2\sqrt{20})=1.118>1$, so on its own it creeps to its final position without bouncing. Poles: $s=-2.76$ and $-7.24$.
 
-\sechook{A high-speed maglev carriage or a car suspension hitting a bump. A mechanical mass sits connected to a grounded frame by an elastic coil spring and a viscous fluid shock absorber. Moving the mass away from its rest position requires continuously stretching the spring.}
+\textbf{Why a constant push is needed.} Once the block rests at $x=1$\,m, velocity and acceleration are zero, so $0+0+k\,x=u$ and
+\begin{equation}u_{ss}=k\,x_{ss}=20\ \text{N/m}\times1\ \text{m}=\mathbf{20\ N}.\end{equation}
+The spring keeps pulling the block back, so something must keep pushing with 20\,N. With no push the block returns to 0; with 10\,N it settles at 0.5\,m (Figure~3).
 
-\textbf{Equation of Motion:} The benchmark plant specified by Modern Monk Labs is a second-order mass-spring-damper:
-\begin{equation}
-m \ddot{x}(t) + c \dot{x}(t) + k x(t) = u(t)
-\end{equation}
-where mass $m = 1.0\text{ kg}$, damping coefficient $c = 10.0\text{ N}\cdot\text{s/m}$, and spring stiffness $k = 20.0\text{ N/m}$. The control objective is to displace the mass from initial rest $x(0) = 0\text{ m}$ to target position $r = 1.0\text{ m}$.
+\fig{fig03_open_loop_plant.png}{0.74}{Open-loop responses to constant forces of 0, 10 and 20\,N. Only 20\,N holds the block at 1\,m.}
 
-\textbf{Open-Loop Physics:} Natural frequency $\omega_n = \sqrt{k/m} = \sqrt{20/1} \approx 4.472\text{ rad/s}$. The open-loop damping ratio is:
-\begin{equation}
-\zeta_{\text{ol}} = \frac{c}{2\sqrt{m k}} = \frac{10.0}{2\sqrt{1.0 \times 20.0}} = \frac{10.0}{8.944} \approx 1.118
-\end{equation}
-Because $\zeta_{\text{ol}} > 1$, the open-loop system is naturally \textit{overdamped} and non-oscillatory.
-
-\textbf{Why the Spring Demands a Constant Push:} At steady-state rest ($t \to \infty$), velocity and acceleration are identically zero: $\dot{x}_{ss} = 0$, $\ddot{x}_{ss} = 0$. Substituting into the equation of motion yields:
-\begin{equation}
-m(0) + c(0) + k \, x_{ss} = u_{ss} \implies u_{ss} = k \, x_{ss} = 20.0\text{ N/m} \times 1.0\text{ m} = \mathbf{20.00\text{ N}}
-\end{equation}
-Holding the block at $1.0\text{ m}$ requires an indefinite, active push of exactly $20.0\text{ N}$ to counter Hooke's restoring force.
-
-\begin{figure}[H]
-\centering
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=4.0cm,keepaspectratio]{figures/fig03_open_loop_plant.png}
-\caption{Figure 3. Open-loop step responses of the plant ($u = 0, 10, 20\text{ N}$). Holding $x = 1.0\text{ m}$ requires $20.0\text{ N}$.}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=4.0cm,keepaspectratio]{figures/fig04_step_metrics.png}
-\caption{Figure 4. Four performance criteria annotated on step response. Rise $0.206\text{ s}$, OS $4.27\%$, settling $1.422\text{ s}$, error $0.000\text{ m}$.}
-\end{minipage}
-\end{figure}
-
+%==================================================================
 \section{How to judge a result}
-
-\sechook{Judging an elevator ride. Passengers demand four things: the elevator must accelerate promptly without stalling, it must not overshoot the floor level and terrify occupants, it must settle quickly without lingering jitter, and it must align flush with the landing threshold.}
-
-\textbf{Four Quantitative Criteria:}
+Four numbers describe a step response (all measured on the target $r=1$\,m):
 \begin{enumerate}
-\item \textbf{Rise Time ($t_r$):} Time required for the response to climb from $10\%$ to $90\%$ of the target setpoint ($0.1\text{ m} \to 0.9\text{ m}$). Measures initial actuator responsiveness. Reported as \texttt{"n/a"} if the response fails to reach $90\%$.
-\item \textbf{Peak Overshoot ($\text{OS}\%$):} Peak percentage by which the response exceeds the target setpoint:
-\begin{equation}
-\text{OS} = \frac{y_{\text{peak}} - r}{r} \times 100\% \quad (\text{strictly relative to target } r = 1.0\text{ m})
-\end{equation}
-\item \textbf{Settling Time ($t_s$):} The elapsed time after which the response remains permanently bounded within a $\pm 2\%$ tolerance band around the setpoint ($0.98\text{ m} \le y(t) \le 1.02\text{ m}$). Reported as \texttt{"never"} if steady-state error keeps the trajectory outside the band.
-\item \textbf{Steady-State Error ($e_{ss}$):} The asymptotic residual error at the end of a long simulation horizon ($T = 15.0\text{ s}$): $e_{ss} = |r - y(T)|$.
+\item \textbf{Rise time} $t_r$: time to go from 10\% to 90\% of the target. Reported as ``n/a'' if the response never reaches 90\%.
+\item \textbf{Overshoot}: $\text{OS}=\dfrac{y_{\text{peak}}-r}{r}\times100\%$, how far past the target it goes (always measured against the setpoint).
+\item \textbf{Settling time} $t_s$: the time after which $y$ stays within $\pm2\%$ of the target (0.98 to 1.02\,m). Reported as ``never'' if it does not.
+\item \textbf{Steady-state error} $e_{ss}$: the remaining gap after a long run ($T=15$\,s, averaged over the last 5\% of samples).
 \end{enumerate}
+\fig{fig04_step_metrics.png}{0.74}{All four measures marked on one example response (PID with $K_p=220$, $K_i=180$, $K_d=14$, chosen only to illustrate the definitions): rise 0.163\,s, overshoot 1.4\%, settling 0.247\,s, steady error 0.0004\,m.}
+\takeaway{A good controller is fast, barely overshoots, settles quickly and ends exactly on target, without demanding an impossible force.}
 
-\sectakeaway{A superior controller optimizes the trade-off envelope: minimizing rise time and settling time without triggering severe overshoot or actuator saturation.}
-
-\newpage
-% =============================================================================
-% PAGE 4: SECTION 5: EACH PART ALONE (Part 1: P Only)
-% =============================================================================
+%==================================================================
 \section{Each part alone}
+\subsection{P only: it always stops short}
+With $u=K_p(r-x)$ the closed loop is $m\ddot x+c\dot x+(k+K_p)x=K_p r$. At rest this gives $(k+K_p)x_{ss}=K_p r$, so
+\begin{equation}x_{ss}=\frac{K_p}{k+K_p}\,r,\qquad e_{ss}=\frac{k}{k+K_p}\,r.\end{equation}
+\emph{In words:} P pushes only while there is an error, and the spring needs a push to hold the block. The block stops where the P-push $K_p\,e_{ss}$ equals the spring force $k\,x_{ss}$; that is always short of the target. For $K_p=10$ the error is $20/30=0.667$\,m. A bigger $K_p$ shrinks the gap but never closes it, and it lowers the damping ratio $\zeta=c/(2\sqrt{m(k+K_p)})$, so the block starts to bounce.
 
-\subsection{Proportional Control ($P$ Only): The Inevitable Offset}
+\fig{fig05_p_only.png}{0.78}{P-only step responses for $K_p=10,50,100,300,1000$. Higher gain shrinks the offset (dotted lines are the predicted final values) but adds bouncing and demands a large force.}
+\fig{fig06_p_theory_vs_sim.png}{0.78}{Theory (line) against simulation (dots). Left: steady error $k/(k+K_p)$. Right: overshoot against gain.}
 
-\sechook{Towing a heavy block against a stiff rubber band using only an elastic tether. When the block is far away, the tether stretches and pulls hard. But as the block nears the destination, tether tension collapses. At some point before reaching the mark, tether pull exactly equals the rubber band's resisting force, leaving the block permanently stranded short of the target.}
+\begin{center}\small
+\begin{tabular}{@{}rcccccc@{}}
+\toprule $K_p$ (N/m) & $\zeta$ & theory $e_{ss}$ (m) & simulated $e_{ss}$ (m) & overshoot & rise time & settling\\\midrule
+10 & 0.913 & 0.6667 & 0.6667 & 0\% & n/a & never\\
+50 & 0.598 & 0.2857 & 0.2857 & 0\% & n/a & never\\
+100 & 0.456 & 0.1667 & 0.1667 & 0\% & 0.184\,s & never\\
+300 & 0.280 & 0.0625 & 0.0625 & 31.2\% & 0.077\,s & never\\
+1000 & 0.157 & 0.0196 & 0.0196 & 57.6\% & 0.036\,s & 1.43\,s\\\bottomrule\end{tabular}\end{center}
+Theory and simulation agree to six decimals. Settling is ``never'' whenever the offset itself exceeds 2\%.
+\takeaway{P alone cannot remove the error: $e_{ss}=k/(k+K_p)$. Raising $K_p$ trades a smaller offset for more bounce (57.6\% overshoot at $K_p=1000$).}
 
-\textbf{Closed-Loop Mathematical Proof:} Substituting $u(t) = K_p(r - x(t))$ into the plant dynamics:
-\begin{equation}
-m \ddot{x} + c \dot{x} + k x = K_p (r - x) \implies m \ddot{x} + c \dot{x} + (k + K_p) x = K_p r
-\end{equation}
-At steady state ($t \to \infty$), all motion ceases: $\ddot{x} = 0, \dot{x} = 0$. The algebraic equilibrium is:
-\begin{equation}
-(k + K_p) x_{ss} = K_p r \implies x_{ss} = \frac{K_p}{k + K_p} r \implies e_{ss} = r - x_{ss} = \mathbf{\frac{k}{k + K_p} r}
-\end{equation}
+\subsection{Adding I: memory removes the offset}
+The integral keeps growing while any error remains, so the output can only stop changing when $e=0$. At that point P and D are both 0, so \emph{the integral term alone supplies the 20\,N holding force}: $u_I(\infty)=k\,x_{ss}=20$\,N. That is exactly what P alone could not provide.
+\fig{fig07_add_i.png}{0.74}{Adding I at $K_p=100$ ($K_i=0$ to 500). Steady error goes to zero for every $K_i>0$ and the integral force settles at 20\,N. Larger $K_i$ also brings more overshoot.}
 
-\textbf{Physical Intuition in Words:} Proportional control commands force strictly in proportion to error ($u = K_p e$). To hold the spring at $1.0\text{ m}$, the plant demands exactly $20.0\text{ N}$ of continuous force. If the error were to reach zero ($e = 0$), proportional force would collapse to $0\text{ N}$, and the spring would instantly pull the block backward. Therefore, the block must stop at an equilibrium point where the remaining error generates exactly $20\text{ N}$: $K_p \cdot e_{ss} = 20\text{ N} \implies e_{ss} = 20 / K_p$.
+\subsection{Adding D: damping removes the bounce}
+Taking D from the measurement ($u_D=-K_d\dot x$) simply adds damping, giving $\zeta=\dfrac{c+K_d}{2\sqrt{m(k+K_p)}}$. For $K_p=300$, $\zeta=1$ needs $c+K_d=2\sqrt{320}=35.78$, i.e.\ $K_d\ge25.78$\,N$\cdot$s/m. Textbook overshoot $\exp(-\pi\zeta/\sqrt{1-\zeta^2})$ is measured against the \emph{final} value $K_p/(k+K_p)=0.9375$\,m; against the setpoint it is $\big[0.9375\,(1+\text{OS}_{\text{final}})-1\big]\times100\%$.
+\fig{fig08_add_d.png}{0.74}{Adding D at $K_p=300$ ($K_d=0$ to 60). Overshoot falls from 31.2\% to 0\% once $\zeta\ge1$.}
+\begin{center}\small
+\begin{tabular}{@{}rcccc@{}}
+\toprule $K_d$ (N$\cdot$s/m) & $\zeta$ & OS vs final (theory) & OS vs setpoint (theory) & OS vs setpoint (simulated)\\\midrule
+0 & 0.280 & 40.07\% & 31.32\% & 31.22\%\\
+10 & 0.559 & 12.03\% & 5.02\% & 4.85\%\\
+30 & 1.118 & 0\% & 0\% & 0\%\\
+60 & 1.957 & 0\% & 0\% & 0\%\end{tabular}\end{center}
+D alone still leaves the 6.25\,cm offset (it has no memory), which is why the three terms are combined.
+\takeaway{I removes the steady error by learning the 20\,N holding force; D adds damping and removes the bounce.}
 
-\begin{figure}[H]
-\centering
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=3.5cm,keepaspectratio]{figures/fig05_p_only.png}
-\caption{Figure 5. Proportional-only step responses across gains ($K_p = 10 \to 1000\text{ N/m}$). Steady error drops from $0.667\text{ m}$ to $0.020\text{ m}$.}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=3.5cm,keepaspectratio]{figures/fig06_p_theory_vs_sim.png}
-\caption{Figure 6. Proportional steady-state error: theory vs simulation. Matches $e_{ss} = \frac{k}{K_p+k}$ to 6 decimal places ($0.0625\text{ m}$ at $K_p=300$).}
-\end{minipage}
-\end{figure}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{rcccccc}
-\toprule
-$K_p$ (N/m) & Closed-Loop $\zeta$ & Theoretical $e_{ss}$ (m) & Simulated $e_{ss}$ (m) & Agreement & Overshoot (\%) & Settling Time (s) \\
-\midrule
-10.0 & 1.8257 & 0.666667 & 0.666667 & Exact ($<10^{-6}$) & 0.00\% & never ($>15$ s) \\
-50.0 & 0.9535 & 0.285714 & 0.285714 & Exact ($<10^{-6}$) & 0.00\% & never ($>15$ s) \\
-100.0 & 0.7217 & 0.166667 & 0.166667 & Exact ($<10^{-6}$) & 0.00\% & never ($>15$ s) \\
-300.0 & 0.4419 & 0.062500 & 0.062500 & Exact ($<10^{-6}$) & 31.22\% & never ($>15$ s) \\
-1000.0 & 0.2476 & 0.019608 & 0.019608 & Exact ($<10^{-6}$) & 57.64\% & 2.582 s \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Quantitative Finding:} Increasing $K_p$ from $10 \to 1000\text{ N/m}$ compresses steady-state error from $0.667\text{ m}$ down to $0.020\text{ m}$. However, the closed-loop damping ratio plummets from $1.83 \to 0.25$, exciting violent oscillations ($57.6\%$ overshoot) and demanding a destructive $1000\text{ N}$ impulse at $t = 0$.
-
-\sectakeaway{Proportional control alone CANNOT eliminate steady-state error in elastic systems; raising $K_p$ reduces offset but destabilizes closed-loop damping.}
-
-\newpage
-% =============================================================================
-% PAGE 5: SECTION 5 (Cont.): ADD I AND ADD D
-% =============================================================================
-\subsection{Adding Integral Action ($I$): The Memory that Solves Offset}
-
-\sechook{Pushing a stalled car up an incline. You push as hard as you can, but your muscles tire and the car stops rolling just shy of the crest. A friend wedges a ratchet behind the tire: every centimeter gained is locked in. The accumulated force builds up until the car is pushed completely over the crest.}
-
-\textbf{Mathematical Mechanism:} The integral term accumulates error over time: $u_I(t) = K_i \int_0^t e(\tau) \, d\tau$. As long as any offset remains ($e \neq 0$), the accumulator continues to grow or shrink. The accumulator only stops changing when the error is driven to absolute zero:
-\begin{equation}
-\frac{d}{dt} \left( u_I(t) \right) = K_i \, e(t) = 0 \iff e(t) \equiv 0
-\end{equation}
-At steady state, $e = 0 \implies P = 0$ and $\dot{x} = 0 \implies D = 0$. Therefore, \textbf{the Integral term alone supplies the full $20.0\text{ N}$ holding force} required by Hooke's law: $u_I(\infty) = k \, x_{ss} = \mathbf{20.00\text{ N}}$.
-
-\subsection{Adding Derivative Action ($D$): Damping the Bounce}
-
-\sechook{Running full speed toward a brick wall. If you only look at your distance from the wall, you will slam into it before you can stop. If you sense your closing velocity, you can plant your feet and brake in anticipation.}
-
-\textbf{Closed-Loop Damping Derivation:} Implementing derivative on measurement ($u_D = -K_d \dot{x}$) augments mechanical damping $c$:
-\begin{equation}
-m \ddot{x} + (c + K_d) \dot{x} + (k + K_p) x = K_p r \implies \zeta = \frac{c + K_d}{2 \sqrt{m (k + K_p)}} = \frac{10.0 + K_d}{2 \sqrt{320}} = \frac{10.0 + K_d}{35.777}
-\end{equation}
-Critical damping ($\zeta = 1.0$) is reached precisely when:
-\begin{equation}
-K_{d,\text{crit}} = 2\sqrt{m(k + K_p)} - c = 35.777 - 10.0 = \mathbf{25.777\text{ N}\cdot\text{s/m}}
-\end{equation}
-For any $K_d \ge 25.78\text{ N}\cdot\text{s/m}$, closed-loop overshoot is analytically guaranteed to vanish ($\text{OS} = 0.00\%$).
-
-\begin{figure}[H]
-\centering
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=3.5cm,keepaspectratio]{figures/fig07_add_i.png}
-\caption{Figure 7. Adding integral action ($K_p = 300$, $K_i = 50 \to 300\text{ N/(m}\cdot\text{s)}$). Integrator learns $20.0\text{ N}$ spring holding force, driving error to $0.0000\text{ m}$.}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=3.5cm,keepaspectratio]{figures/fig08_add_d.png}
-\caption{Figure 8. Adding derivative damping ($K_p = 300$, $K_d = 0 \to 60\text{ N}\cdot\text{s/m}$). Overshoot drops from $31.25\%$ to $0.00\%$ as $K_d$ reaches critical damping $25.8\text{ N}\cdot\text{s/m}$.}
-\end{minipage}
-\end{figure}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{rcccccc}
-\toprule
-$K_d$ (N$\cdot$s/m) & Damping $\zeta$ & Predicted Overshoot (vs $x_{ss}$) & Predicted Overshoot (vs Setpoint) & Simulated Overshoot & Settling Time (s) \\
-\midrule
-0.0 & 0.2795 & 40.00\% & 31.25\% & 31.22\% & never ($e_{ss}=0.0625$) \\
-10.0 & 0.5590 & 12.02\% & 5.02\% & 4.85\% & never ($e_{ss}=0.0625$) \\
-30.0 & 1.1180 & 0.00\% & 0.00\% & 0.00\% & never ($e_{ss}=0.0625$) \\
-60.0 & 1.9566 & 0.00\% & 0.00\% & 0.00\% & never ($e_{ss}=0.0625$) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Overshoot Reference Definition Note:} The classic textbook formula $\text{OS}_{\text{final}} = \exp(-\pi\zeta/\sqrt{1-\zeta^2})$ evaluates peak overshoot relative to final position $x_{ss} = \frac{K_p}{k+K_p} = 0.9375\text{ m}$. To evaluate relative to setpoint $r = 1.0\text{ m}$, it must be converted: $\text{OS}_{\text{setpoint}} = [(\frac{K_p}{k+K_p})(1 + \text{OS}_{\text{final}}) - 1] \times 100\%$. At $K_d = 10$, this conversion yields $5.02\%$ theory vs $4.85\%$ simulation, reconciling theory and code.
-
-\sectakeaway{Integral action eliminates steady offset by learning the exact holding force; Derivative action injects synthetic viscous damping, quenching overshoot.}
-
-\newpage
-% =============================================================================
-% PAGE 6: SECTION 6: ALL TOGETHER
-% =============================================================================
+%==================================================================
 \section{All together}
+\fig{fig09_p_pi_pd_pid.png}{0.78}{P, PI, PD and PID on one plot (top) with the force each demands (bottom).}
+\begin{center}\small
+\begin{tabular}{@{}l c c c c c c@{}}
+\toprule Controller & $K_p/K_i/K_d$ & rise (s) & overshoot & settling (s) & $e_{ss}$ (m) & peak force (N)\\\midrule
+P & 300/0/0 & 0.077 & 31.22\% & never & 0.0625 & 300.0\\
+PI (as in Fig.~9) & 100/200/0 & 0.148 & 21.90\% & 0.845 & 0 & 102.2\\
+PD & 300/0/30 & 0.305 & 0\% & never & 0.0625 & 300.0\\
+\textbf{PID} & \textbf{300/300/30} & 0.206 & \textbf{4.27\%} & \textbf{1.422} & \textbf{0} & 300.3\\
+PID, aggressive & 600/300/30 & 0.102 & 1.18\% & 0.157 & 0 & 600.3\\\bottomrule\end{tabular}\end{center}
+(For reference, PI at 300/300/0 overshoots 38.7\% and settles in 0.83\,s.)\par Only the full PID has no steady error \emph{and} no large overshoot: P gives speed, I accuracy, D calm.
 
-\sechook{Tuning an audio mixing console with bass, midrange, and treble. Turning up treble alone gives piercing sharpness; boosting bass alone produces a muddy rumble. Pristine acoustic clarity requires balancing all three channels in unison.}
+\textbf{Why $K_p=300$, $K_i=300$, $K_d=30$.} These gains meet all of my targets: overshoot below 5\% (4.27\%), settling below 1.5\,s (1.42\,s), zero final error. $K_d=30$ is the round number just above the critical-damping value 25.8 (so $\zeta=1.12$), and $K_p=300$ keeps the starting force near 300\,N. I also ran a grid search over $K_p\in[200,600]$, $K_i\in[100,500]$, $K_d\in[10,50]$. It shows that faster settings exist: for example 300/200/20 gives 0.46\% overshoot and 0.243\,s settling at the same 300\,N, and 400/200/20 settles in 0.171\,s at 400\,N. So 300/300/30 is a good, simple baseline, not the optimum. $K_p=600$ shows the other side of the trade-off: it settles in 0.157\,s but demands 600\,N at $t=0$, far above a real 30\,N motor, which leads straight into Section~7.
+\fig{fig10_final_gains.png}{0.74}{Selected controller: response and force (top); individual P, I and D forces (bottom).}
 
-\textbf{Systematic Architecture Comparison:} We compare the four evolutionary stages of control on the mass-spring-damper benchmark: Proportional-only ($300/0/0$), Proportional-Integral ($300/300/0$), Proportional-Derivative ($300/0/30$), and full PID ($300/300/30$).
-
-\begin{figure}[H]
-\centering
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=3.5cm,keepaspectratio]{figures/fig09_p_pi_pd_pid.png}
-\caption{Figure 9. Side-by-side comparison of P, PI, PD, and full PID architectures. Full PID achieves $4.27\%$ overshoot and $1.422\text{ s}$ settling.}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=3.5cm,keepaspectratio]{figures/fig10_final_gains.png}
-\caption{Figure 10. Selected baseline PID controller response ($K_p = 300, K_i = 300, K_d = 30$). Peak force is $300.3\text{ N}$ with zero steady-state error.}
-\end{minipage}
-\end{figure}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lccccccp{5.5cm}}
-\toprule
-\textbf{Controller} & $K_p / K_i / K_d$ & $t_r$ (s) & Overshoot (\%) & $t_s$ (s) & $e_{ss}$ (m) & Peak $u$ (N) & \textbf{Engineering Evaluation} \\
-\midrule
-\textbf{P Only} & 300 / 0 / 0 & 0.089 & 31.22\% & never & 0.0625 & 300.0 & Fast initial jump, but suffers 6.25 cm steady droop and bounces. \\
-\textbf{PI} & 300 / 300 / 0 & 0.074 & 38.67\% & 0.833 & 0.0000 & 300.7 & Zero steady error, but lack of damping causes violent $38.7\%$ ring. \\
-\textbf{PD} & 300 / 0 / 30 & 0.231 & 0.00\% & never & 0.0625 & 300.0 & Perfectly damped ($\zeta=1.12$), zero overshoot, but offset persists. \\
-\textbf{Full PID} & 300 / 300 / 30 & 0.206 & 4.27\% & 1.422 & 0.0000 & 300.3 & \textbf{Sweet Spot:} $<5\%$ overshoot, zero offset, smooth settling. \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Final Gain Selection Rationale:}
-Our baseline gains ($K_p = 300\text{ N/m}, K_i = 300\text{ N/(m}\cdot\text{s)}, K_d = 30\text{ N}\cdot\text{s/m}$) were chosen via grid search satisfying three strict criteria:
-\begin{enumerate}
-\item \textbf{Overshoot Target:} Peak overshoot is kept below $5\%$ ($\text{OS} = 4.27\%$).
-\item \textbf{Settling Performance:} Settles cleanly within the $\pm 2\%$ band in $1.422\text{ s}$ with zero final steady-state error ($e_{ss} \equiv 0.0000\text{ m}$).
-\item \textbf{Actuator Feasibility:} Demands an initial linear force of $300\text{ N}$.
-\end{enumerate}
-
-\textbf{The Honest Engineering Tension (Bridging to Section 7):}
-Why not choose an ultra-aggressive gain like $K_p = 600\text{ N/m}$? In pure simulation, $K_p = 600$ is blisteringly fast ($t_s = 0.155\text{ s}$). However, at $t = 0$, it demands $u(0) = 600\text{ N}$. Real electric motors, hydraulic valves, and servo drives have physical ceilings (e.g., $|u| \le 30\text{ N}$). Applying aggressive linear gains to constrained physical actuators causes catastrophic breakdown.
-
-\sectakeaway{Full PID combines the virtues of all three terms: eliminating steady offset while maintaining sub-5\% overshoot.}
-
-\newpage
-% =============================================================================
-% PAGE 7: SECTION 7: REAL-WORLD PROBLEMS (Part 1: Windup & Noise)
-% =============================================================================
+%==================================================================
 \section{Real-world problems}
+Ideal simulations assume unlimited force, perfect sensors and instant updates. Four things break that, each shown with a graph and fixed. All use gains 300/300/30.
 
-Textbook control theory assumes ideal mathematical abstractions: infinite actuator thrust, noiseless sensors, instantaneous sampling, and smooth analytical trajectories. Physical robots violate every single one of these assumptions. Below, we dissect and resolve the four major physical hazards.
+\subsection{(a) Actuator limit and integral windup}
+A real motor saturates (here $|u|\le30$\,N). While it is saturated the block cannot speed up, but the error is still positive, so the integral keeps filling up. When the block reaches the target the stored charge keeps pushing and it overshoots. \textbf{Fix: clamping anti-windup}: stop integrating while the output is saturated \emph{and} the error would push it further into the limit.
+\fig{fig11_windup_clamping.png}{0.74}{Windup under a 30\,N limit. Without the fix: 17.6\% overshoot, 2.98\,s settling. With clamping: 0\% overshoot, 1.06\,s.}
 
-\subsection{Problem (a): Actuator Saturation \& Integrator Windup}
+\subsection{(b) Sensor noise and the D term}
+Real sensors jitter. With Gaussian noise of $\sigma=1$\,mm (seed 42) and $\Delta t=1$\,ms, differencing two samples gives velocity noise of about $\sqrt2\sigma/\Delta t=1.41$\,m/s, which $K_d=30$ turns into
+\begin{equation}\text{std}(u_{\text{noise}})\approx K_d\frac{\sqrt2\,\sigma}{\Delta t}=30\times1.414\approx42.4\ \text{N}\end{equation}
+(measured: 43.4\,N), larger than the whole 30\,N limit. \textbf{Fix: low-pass filter the derivative} with $\alpha=\Delta t/(\tau+\Delta t)$: $\tau=0.02$\,s gives 1.76\,N and $\tau=0.05$\,s gives 0.90\,N. The price is a small extra lag.
+\fig{fig12_noise_filtering.png}{0.74}{Control force with raw D (large chatter) and with the filtered D ($\tau=0.02$\,s).}
 
-\sechook{Pressing the accelerator pedal to the floorboard in a heavily loaded subcompact car climbing a steep mountain highway. The engine is running at $100\%$ capacity and cannot deliver another ounce of torque. If cruise control software keeps demanding more speed, its integral memory accumulates a massive backlog. When the road flattens out, the car rockets forward out of control because the computer takes miles to bleed off its stored backlog.}
+\subsection{(c) Setpoint kick}
+If D is taken on the error and the target jumps 0 to 1\,m in one sample, $de/dt=1/0.001=1000$\,m/s and $u_D=30\times1000=30{,}000$\,N, so $u(0)=30{,}300$\,N. \textbf{Fix: differentiate the measurement, not the error.} The block cannot jump, so the spike disappears (300\,N, a 100$\times$ reduction).
+\fig{fig13_setpoint_kick.png}{0.66}{Setpoint kick: D on error gives a 30,300\,N spike; D on measurement gives 300\,N.}
 
-\textbf{Physical Hazard:} Real actuators have physical ceilings (e.g., maximum motor force $|u| \le 30.0\text{ N}$). When a large setpoint step occurs, $u(t)$ immediately hits $30\text{ N}$. While the actuator is saturated, the physical mass cannot accelerate any faster, so error remains positive. An unhardened integrator keeps integrating this error: $I(t) = K_i \int_0^t e(\tau) \, d\tau \to \infty$. When the mass finally crosses the setpoint ($e < 0$), the accumulated charge in $I(t)$ is so immense that $u(t)$ remains saturated at $+30\text{ N}$, propelling the mass violently past the target.
+\subsection{(d) Slow controller updates}
+Real controllers update every $\Delta t_{\text{ctrl}}$ and hold the command in between (zero-order hold). That adds a delay of about $\Delta t_{\text{ctrl}}/2$ (a phase lag $\approx\omega\,\Delta t_{\text{ctrl}}/2$), so the controller reacts to old information. I stepped the plant at 1\,ms and varied the controller period. Long runs show the stability limit:
+\begin{itemize}
+\item below about 60\,ms the response settles (error shrinks over a 60\,s run);
+\item around 62\,ms the oscillation grows slowly;
+\item from about 64\,ms upward it grows explosively, and at 90\,ms the peak already reaches 160\,m within 3\,s.
+\end{itemize}
+A short 3\,s test would report a higher, misleading limit (66.5\,ms), because slow growth is invisible over a few seconds. The system is linear (no saturation) here, so this is steadily growing oscillation, not a limit cycle.
+\fig{fig14_slow_sampling.png}{0.74}{Controller update periods of 1, 20, 50 and 90\,ms. Small periods behave like a continuous controller; 90\,ms diverges.}
 
-\textbf{Industrial Fix (Conditional Clamping Anti-Windup):} The controller halts integration if and only if two simultaneous conditions occur: (1) the unconstrained control output is saturated ($|u_{\text{raw}}| \ge u_{\max}$), and (2) the sign of current error matches the sign of the command ($\operatorname{sgn}(e) = \operatorname{sgn}(u_{\text{raw}})$), which would drive the actuator deeper into saturation:
-\begin{equation}
-\text{Freeze } \int e \, dt \iff (|u_{\text{raw}}| \ge u_{\max}) \land (e \cdot u_{\text{raw}} > 0)
-\end{equation}
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}l X X X@{}}
+\toprule Problem & Without fix & Fix & With fix\\\midrule
+(a) saturation & 17.6\% overshoot, 2.98\,s & clamping anti-windup & 0\% overshoot, 1.06\,s\\
+(b) noise & 43.4\,N rms force chatter & low-pass D, $\tau=0.02$\,s & 1.76\,N rms\\
+(c) setpoint kick & 30,300\,N spike & D on measurement & 300\,N\\
+(d) slow updates & diverges at $\ge64$\,ms & update faster than about 60\,ms & stable, smooth\\\bottomrule\end{tabularx}\end{center}
 
-\subsection{Problem (b): Sensor Noise \& Derivative Chatter}
-
-\sechook{Measuring distance with a shaky handheld ultrasound ruler. Even if you hold your hand completely still, electrical noise causes the readout to flicker rapidly between $0.999\text{ m}$ and $1.001\text{ m}$. If you calculate your speed by subtracting consecutive readings, the computer concludes you are vibrating at high velocity.}
-
-\textbf{Physical Hazard:} All physical sensors (optical encoders, resolvers, potentiometers) exhibit thermal and quantization noise. Consider Gaussian noise $y_{\text{meas}} = y_{\text{true}} + \mathcal{N}(0, \sigma^2)$ with standard deviation $\sigma = 1.0\text{ mm}$ ($0.001\text{ m}$) sampled at $\Delta t = 1\text{ ms}$. Discrete differentiation between consecutive samples magnifies noise by $\text{std}(\dot{y}_{\text{noise}}) = \frac{\sqrt{2} \sigma}{\Delta t} \approx 1.414\text{ m/s}$. Multiplying by $K_d = 30\text{ N}\cdot\text{s/m}$ injects pure force chatter with standard deviation:
-\begin{equation}
-\text{std}(u_{\text{noise}}) = K_d \cdot \frac{\sqrt{2} \sigma}{\Delta t} \approx 30 \times 1.414 = \mathbf{42.43\text{ N RMS}}
-\end{equation}
-This exceeds the entire $30\text{ N}$ actuator capacity with pure acoustic buzzing, destroying gearbox teeth and overheating coils.
-
-\textbf{Industrial Fix (First-Order Low-Pass Derivative Filter):} We pass the raw velocity estimate through a continuous first-order low-pass filter $H(s) = \frac{1}{\tau s + 1}$ ($\tau = 0.02\text{ s}$), discretized with smoothing factor $\alpha = \frac{\Delta t}{\tau + \Delta t}$:
-\begin{equation}
-\dot{y}_{f}[k] = \dot{y}_{f}[k-1] + \alpha \left( \dot{y}_{\text{raw}}[k] - \dot{y}_{f}[k-1] \right)
-\end{equation}
-
-\begin{figure}[H]
-\centering
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=1.95cm,keepaspectratio]{figures/fig11_windup_clamping.png}
-\caption{Figure 11. Integrator windup under $30\text{ N}$ actuator saturation and conditional clamping fix. Overshoot drops from $17.6\%$ to $0.0\%$, settling improves from $2.98\text{ s}$ to $1.06\text{ s}$.}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=1.95cm,keepaspectratio]{figures/fig12_noise_filtering.png}
-\caption{Figure 12. Sensor noise ($\sigma = 1\text{ mm}$, seed 42) and first-order low-pass filter ($\tau = 0.02\text{ s}$). Actuator force chatter drops from $43.35\text{ N}$ to $1.76\text{ N}$ RMS.}
-\end{minipage}
-\end{figure}
-
-\sectakeaway{Without anti-windup clamping, motor saturation causes massive overshoot; without low-pass filtering, sensor noise destroys physical actuators.}
-
-\newpage
-% =============================================================================
-% PAGE 8: SECTION 7 (Cont.): KICK & SLOW SAMPLING
-% =============================================================================
-\subsection{Problem (c): Setpoint Kick on Step Reference}
-
-\sechook{Sitting in a vehicle when the driver abruptly slams the steering wheel from straight-ahead to a sharp right angle in a tenth of a second. If steering effort is tied to the rate of change of steering error, passengers experience a violent neck-snapping jolt.}
-
-\textbf{Physical Hazard:} Classical PID computes derivative on error: $u_D = K_d \frac{d(r - y)}{dt} = K_d \left( \frac{dr}{dt} - \frac{dy}{dt} \right)$. When the user commands an instantaneous step change in setpoint ($r$ jumps from $0 \to 1.0\text{ m}$ in one sample step $\Delta t = 1\text{ ms}$), the mathematical derivative $\frac{\Delta r}{\Delta t} = \frac{1.0\text{ m}}{0.001\text{ s}} = 1000\text{ m/s}$. The derivative term produces a massive theoretical spike:
-\begin{equation}
-u_D(0) = K_d \cdot 1000 = 30 \times 1000 = \mathbf{30,000\text{ N}} \implies u_{\text{total}}(0) = \mathbf{30,300\text{ N}}
-\end{equation}
-This impulse saturates actuators and shears coupling pins.
-
-\textbf{Industrial Fix (Derivative on Measurement):} Since setpoint changes are deliberate user commands rather than physical plant disturbances, we differentiate only the negative measured plant output: $u_D(t) = -K_d \frac{dy(t)}{dt}$. Because physical mass has inertia, position $y(t)$ is continuous and cannot change instantaneously. Thus, $\frac{dy}{dt}(0) = 0$, reducing initial force from $30,300\text{ N} \to 300\text{ N}$ (a 100x reduction).
-
-\subsection{Problem (d): Slow Digital Controller Sampling}
-
-\sechook{Driving a car down a winding road while wearing strobe goggles that only flash your eyes open once every two seconds. Between flashes, the car drifts off course. When you finally open your eyes, you panic, overcorrect, and veer into the opposite ditch.}
-
-\textbf{Physical Hazard:} Microcontrollers execute control loops at discrete sampling periods $\Delta t_{\text{ctrl}}$. While the continuous physical plant integrates at fine time scale ($\Delta t_{\text{sim}} = 1\text{ ms}$), the controller holds its command constant between updates via Zero-Order Hold (ZOH). A zero-order hold introduces an effective pure time delay of half the sample period:
-\begin{equation}
-\tau_{\text{delay}} \approx \frac{\Delta t_{\text{ctrl}}}{2} \implies \text{Phase Lag } \theta_{\text{lag}} \approx \omega \cdot \frac{\Delta t_{\text{ctrl}}}{2}
-\end{equation}
-As $\Delta t_{\text{ctrl}}$ increases, this phase lag erodes the closed-loop phase margin until the system destabilizes into unbounded oscillation.
-
-\begin{figure}[H]
-\centering
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=1.95cm,keepaspectratio]{figures/fig13_setpoint_kick.png}
-\caption{Figure 13. Derivative kick on setpoint step ($1.0\text{ m}$). D-on-measurement eliminates the $30,300\text{ N}$ kick spike, capping demand at $300\text{ N}$.}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=1.95cm,keepaspectratio]{figures/fig14_slow_sampling.png}
-\caption{Figure 14. Slow digital sampling and stability threshold. Discrete updates destabilize at $\Delta t_{\text{ctrl}} = 60.5\text{ ms}$, with violent divergence at $100\text{ ms}$.}
-\end{minipage}
-\end{figure}
-
-\textbf{Bisection Stability Threshold Analysis:}
-Running rigorous bisection sweeps across controller sample periods: (1) \textbf{30-second Horizon (Strict 5\% Settling):} Asymptotic limit cycles emerge at $\mathbf{\Delta t_{\text{ctrl}} = 60.5\text{ ms}}$; (2) \textbf{10-second Horizon:} Settles cleanly up to $\mathbf{59.5\text{ ms}}$; (3) \textbf{3-second Short Window:} Divergence appears at $\mathbf{66.5\text{ ms}}$ (short runs miss slow, late-time energy growth). At $\Delta t_{\text{ctrl}} = 100\text{ ms}$, the system diverges violently.
-
-\vspace{-4pt}
-\begin{table}[H]
-\centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lp{3.4cm}p{3.4cm}p{5.6cm}}
-\toprule
-\textbf{Real-World Hazard} & \textbf{Unhardened Behavior} & \textbf{Engineered Production Fix} & \textbf{Measured Quantitative Performance} \\
-\midrule
-(a) Actuator Saturation & $17.6\%$ OS, $t_s = 2.98\text{ s}$ & Conditional Clamping Anti-Windup & Overshoot drops to $0.0\%$, settling accelerates to $1.06\text{ s}$. \\
-(b) Sensor Noise & $43.35\text{ N}$ RMS force chatter & Low-Pass Derivative Filter ($\tau = 0.02\text{ s}$) & Force chatter slashed by $96\%$ to $1.76\text{ N}$ RMS. \\
-(c) Setpoint Kick & $30,300\text{ N}$ instantaneous shock & Derivative on Measurement ($-dy/dt$) & Peak shock dropped by 100x to an orderly $300\text{ N}$. \\
-(d) Slow Sampling & Destabilizes into limit cycles & Execute at $\Delta t_{\text{ctrl}} < 60\text{ ms}$ & Guarantees stability; stable at $1\text{--}50\text{ ms}$, diverges at $100\text{ ms}$. \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\sectakeaway{Derivative-on-measurement prevents setpoint kick; digital loops must sample faster than 60 ms to avoid phase-lag instability.}
-
-\newpage
-% =============================================================================
-% PAGE 9: SECTION 8: CHOOSING THE GAINS (Manual Recipe)
-% =============================================================================
+%==================================================================
 \section{Choosing the gains}
-
-Tuning a PID controller without a systematic recipe leads to chaotic guesswork. Below, we formalize two rigorous tuning methodologies: an empirical 6-step manual tuning procedure and the frequency-domain Ziegler-Nichols method on a higher-order plant.
-
-\subsection{Systematic Manual Tuning Procedure}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lcccccc}
-\toprule
-\textbf{Parameter} & \textbf{Rise Time} & \textbf{Overshoot} & \textbf{Settling Time} & \textbf{Steady Error} & \textbf{Noise Chatter} & \textbf{Measured Test Plant Evidence} \\
-\midrule
-\textbf{Raise $K_p$} & Decreases & Increases & Prolongs & Decreases & Small effect & $K_p=100 \to 1000: t_r \downarrow 0.18 \to 0.04\text{s}, \text{OS} \uparrow 0 \to 57.6\%$. \\
-\textbf{Raise $K_i$} & Small decrease & Increases & Improves then degrades & Eliminates & Zero effect & $K_i=50 \to 300: e_{ss} \to 0.000\text{m}, \text{OS} \uparrow 0 \to 38.7\%$. \\
-\textbf{Raise $K_d$} & Increases & Decreases & Improves to $\zeta=1$ & No effect & Severely increases & $K_d=0 \to 30: \text{OS} \downarrow 31.2 \to 0.0\%$, chatter $\uparrow 43.4\text{N}$. \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Practical 6-Step Manual Tuning Recipe:}
+\subsection{Manual tuning recipe}
 \begin{enumerate}
-\item \textbf{(1) Set $K_i = K_d = 0$:} Initialize the system with proportional control only to establish the baseline open-loop stiffness.
-\item \textbf{(2) Raise $K_p$ until fast but starts to overshoot:} Increase $K_p$ until the plant moves briskly toward the setpoint (e.g., $K_p = 300\text{ N/m}$). Notice that steady-state error shrinks ($e_{ss} = 0.0625\text{ m}$), but the mass bounces with $31.2\%$ overshoot.
-\item \textbf{(3) Add $K_d$ until the bounce is damped:} Increase derivative gain (e.g., $K_d = 30\text{ N}\cdot\text{s/m}$) to introduce dynamic velocity braking. This increases closed-loop damping ($\zeta = 1.12$), completely quenching the bounce and eliminating overshoot ($\text{OS} = 0.0\%$).
-\item \textbf{(4) Add $K_i$ until steady error is gone:} Slowly raise integral gain (e.g., $K_i = 300\text{ N/(m}\cdot\text{s)}$) to accumulate the required $20.0\text{ N}$ spring holding force, driving final position to exactly $1.0000\text{ m}$ ($e_{ss} \equiv 0.0000\text{ m}$).
-\item \textbf{(5) If overshoot returns, lower $K_i$ or raise $K_d$:} Adding integral action introduces phase lag that can cause a secondary overshoot ($4.27\%$). If overshoot exceeds application specifications, trim $K_i$ or increase $K_d$ to restore critical damping.
-\item \textbf{(6) Re-check with noise and force limit:} Test under real hardware conditions: verify that clamping anti-windup operates cleanly under motor limits ($|u| \le 30\text{ N}$) and engage low-pass filtering ($\tau = 0.02\text{ s}$) to verify sensor noise suppression.
+\item Set $K_i=K_d=0$.
+\item Raise $K_p$ until the response is fast but starts to overshoot ($K_p=300$: 31.2\% overshoot).
+\item Add $K_d$ until the bounce is damped ($K_d=30$: $\zeta=1.12$, overshoot 0\%).
+\item Add $K_i$ until the steady error is gone ($K_i=300$: error 0.0625\,m $\to$ 0).
+\item If overshoot returns (4.27\% here), lower $K_i$ or raise $K_d$.
+\item Re-check with the force limit and with noise (clamping, low-pass on D).
 \end{enumerate}
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}l c c c c c X@{}}
+\toprule Raise & rise time & overshoot & settling & steady error & noise & example from this report\\\midrule
+$K_p$ & falls & rises & varies & falls & little & $K_p$ 100$\to$1000: $e_{ss}$ 0.167$\to$0.020\,m, OS 0$\to$57.6\%\\
+$K_i$ & small fall & rises & improves, then worsens & removed & none & PD$\to$PID: $e_{ss}$ 0.0625\,m $\to$ 0\\
+$K_d$ & rises & falls & improves up to $\zeta=1$ & none & much worse & $K_d$ 0$\to$30: OS 31.2\%$\to$0\%\\\bottomrule\end{tabularx}\end{center}
 
-\sectakeaway{Follow the disciplined sequence: tune P for speed, D for damping, I for accuracy, then harden against saturation and noise.}
+\subsection{Ziegler--Nichols on $G(s)=1/(s+1)^3$}
+Method: use P only and raise $K_p$ until the output oscillates steadily; call that gain $K_u$ and the oscillation period $T_u$.
 
-\newpage
-% =============================================================================
-% PAGE 10: SECTION 8 (Cont.): ZIEGLER-NICHOLS ON 3-LAG PLANT
-% =============================================================================
-\subsection{Ziegler-Nichols Identification on Higher-Order Plant $G(s) = 1/(s+1)^3$}
+\emph{Theory check.} Three lags have phase $-3\arctan\omega=-180^\circ$ at $\omega=\sqrt3$ rad/s, where $|G|=(1/2)^3=1/8$. So $K_u=8$ and $T_u=2\pi/\sqrt3=3.628$\,s.
 
-\sechook{Tuning an acoustic feedback loop on a concert microphone. You raise the amplifier gain until the speakers begin to emit a clean, sustained hum that neither grows into deafening screech nor fades away. That threshold gain and the pitch of the hum tell you the exact acoustic properties of the room.}
+\emph{Simulation.} Sweeping $K_p$ from 5 to 10 in steps of 0.1: below 8 the oscillation decays, at 8.0 it is sustained, above 8 it grows. Peaks are 3.625\,s apart, so $K_u=8.00$ and $T_u=3.625$\,s (theory 3.628\,s).
+\fig{fig15_zn_sustained_oscillation.png}{0.74}{P-only control around $K_u$: decaying, sustained (period $T_u=3.625$\,s) and growing oscillation.}
 
-\textbf{Theoretical Cross-Check Derivation:}
-A single second-order plant with positive damping cannot oscillate with pure sustain under P-only control. To demonstrate frequency-domain tuning, we analyze a 3rd-order plant consisting of three cascaded first-order lags:
-\begin{equation}
-G(s) = \frac{1}{(s + 1)^3} \implies \phi(\omega) = -3 \arctan(\omega) \implies -3 \arctan(\omega_u) = -180^\circ \implies \mathbf{\omega_u = \sqrt{3} \approx 1.732\text{ rad/s}}
-\end{equation}
-The plant magnitude at this critical frequency is:
-\begin{equation}
-|G(j\sqrt{3})| = \left( \frac{1}{\sqrt{1 + 3}} \right)^3 = \left( \frac{1}{2} \right)^3 = \mathbf{\frac{1}{8}} \implies K_u = \frac{1}{|G(j\omega_u)|} = \mathbf{8.00}, \quad T_u = \frac{2\pi}{\sqrt{3}} = \mathbf{3.6276\text{ s}}
-\end{equation}
+The classic PID rule is $K_p=0.6K_u$, $T_i=T_u/2$, $T_d=T_u/8$, converted to parallel gains with $K_i=K_p/T_i$ and $K_d=K_pT_d$. It overshoots a lot, so I compared it with Tyreus--Luyben and searched for a better set (target: overshoot below 10\% and settling below 10\,s).
+\fig{fig16_zn_vs_improved.png}{0.74}{Classic Ziegler--Nichols, Tyreus--Luyben and my improved gains on $1/(s+1)^3$.}
+\begin{center}\small
+\begin{tabular}{@{}l c c c c@{}}
+\toprule Method & $K_p/K_i/K_d$ & overshoot & settling & rise\\\midrule
+Classic ZN PID & 4.80/2.65/2.18 & 52.4\% & 9.90\,s & 0.95\,s\\
+Classic ZN PI & 3.60/1.19/0 & 56.1\% & 30.7\,s & 1.05\,s\\
+Tyreus--Luyben$^*$ & 3.64/0.46/2.09 & 0.8\% & 16.9\,s & 1.51\,s\\
+\textbf{Improved} ($\tau=0.02$\,s) & \textbf{3.60/0.80/3.20} & \textbf{3.1\%} & \textbf{8.67\,s} & 1.68\,s\\\bottomrule\end{tabular}\\[2pt]{\footnotesize $^*$with D filter $\tau=0.02$\,s (0.96\% overshoot unfiltered). Metrics measured over 35\,s so that slow tails are included.}\end{center}
+\takeaway{Ziegler--Nichols gives a starting point, not a finished design: here it needs retuning to cut 52\% overshoot to 3\% with settling under 9\,s.}
 
-\textbf{Simulation Sweep Results:} Sweeping $K_p = 5.0 \to 10.0$ in steps of $0.1$ on the simulated plant ($\Delta t = 1\text{ ms}$):
-\begin{itemize}
-\item At $K_p = 6.0 < K_u$: Oscillations decay exponentially to steady-state offset.
-\item At $K_p = 8.0 = K_u$: Sustained, stable sinusoidal limit cycles with peak-to-peak period $T_u = \mathbf{3.625\text{ s}}$ (error vs theory $<0.1\%$).
-\item At $K_p = 9.5 > K_u$: Oscillations grow exponentially without bound.
-\end{itemize}
-
-\begin{figure}[H]
-\centering
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=3.5cm,keepaspectratio]{figures/fig15_zn_sustained_oscillation.png}
-\caption{Figure 15. Ziegler-Nichols sustained oscillation identification on $G(s) = 1/(s+1)^3$. Ultimate gain $K_u = 8.00$, ultimate period $T_u = 3.625\text{ s}$.}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.485\textwidth}
-\centering
-\includegraphics[width=\textwidth,height=3.5cm,keepaspectratio]{figures/fig16_zn_vs_improved.png}
-\caption{Figure 16. Ziegler-Nichols vs Tyreus-Luyben vs Improved PID. Improved gains cut overshoot from $52.44\%$ to $3.10\%$ and settle in $8.67\text{ s}$.}
-\end{minipage}
-\end{figure}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lcccccc}
-\toprule
-\textbf{Tuning Method} & $K_p / K_i / K_d$ & Overshoot (\%) & Settling Time (s) & Rise Time (s) & \textbf{Evaluation \& Practical Suitability} \\
-\midrule
-\textbf{Classic ZN PID} & 4.80 / 2.65 / 2.18 & \textbf{52.44\%} & 9.898 s & 0.950 s & Severe $52.4\%$ overshoot; violent for robotics. \\
-\textbf{Classic ZN PI} & 3.60 / 1.19 / 0.00 & \textbf{56.05\%} & 30.735 s & 1.054 s & Massive overshoot, lacks derivative damping. \\
-\textbf{Tyreus-Luyben} & 3.64 / 0.46 / 2.09 & \textbf{0.82\%} & 16.870 s & 1.506 s & Calm ($<1\%$ OS), but sluggish settling ($16.9\text{ s}$). \\
-\textbf{Improved PID} & 3.60 / 0.80 / 3.20 & \textbf{3.10\%} & \textbf{8.672 s} & 1.675 s & \textbf{Sweet Spot:} Meets $<10\%$ OS and $<10\text{ s}$ settling. \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\sectakeaway{Classic Ziegler-Nichols yields aggressive quarter-decay overshoot (52\%); modern retuning balances agility with sub-5\% overshoot.}
-
-\newpage
-% =============================================================================
-% PAGE 11: SECTION 9: THE CODE
-% =============================================================================
+%==================================================================
 \section{The code}
+The controller is one small class in \texttt{pidlab/pid.py} using only NumPy. Options (all switchable, so Section~7 can show before and after): output limits \texttt{u\_min/u\_max}; anti-windup \texttt{"clamp"}, \texttt{"none"} or \texttt{"backcalc"}; D on \texttt{"measurement"} or \texttt{"error"}; and a low-pass filter on D (\texttt{d\_filter\_tau}). Units: $e$ in m, $u$ in N, $K_p$ in N/m, $K_i$ in N/(m$\cdot$s), $K_d$ in N$\cdot$s/m, times in s. Below is its \texttt{update()} method, called once per sample.
+\lstinputlisting[firstline=55,lastline=134]{\pidpath}
+\subsection*{Run on the test system (30\,N limit, all fixes on)}
+\fig{fig17_final_demo.png}{0.62}{Final controller ($K_p=300$, $K_i=300$, $K_d=30$, $\tau=0.02$\,s, $|u|\le30$\,N): position, force and the three terms.}
+\begin{center}\small\ttfamily
+Gains: Kp=300  Ki=300  Kd=30 | clamp, D on measurement, tau=0.02 s | limit +/-30 N\\
+rise 0.454 s | overshoot 0.00\% | settling 0.989 s | steady error 0.0000 m | peak force 30.00 N\\
+first 5 forces: [30.0, 30.0, 30.0, 30.0, 30.0]
+\end{center}
+Compared with Section~6 (4.27\% overshoot, rise 0.206\,s), the 30\,N limit makes the rise slower (0.454\,s) and the clamping removes the overshoot. The force limit, not the gains, is what sets the speed.
 
-Below is the self-contained, dependency-free Python implementation of our production parallel-form PID controller. It incorporates all real-world hardening features derived in Section 7: conditional integration clamping (anti-windup), derivative-on-measurement (kick suppression), and first-order low-pass derivative filtering (noise attenuation).
-
-\begin{footnotesize}
-\begin{verbatim}
-import numpy as np
-
-class PID:
-    """Discrete Parallel-Form PID Controller with Industrial Hardening.
-    Formula:  u(t) = Kp * e(t) + Ki * integral(e*dt) + Kd * de/dt
-    Units:    e [m], u [N], Kp [N/m], Ki [N/(m*s)], Kd [N*s/m], dt [s], tau [s]
-    """
-    def __init__(self, kp=0.0, ki=0.0, kd=0.0, dt=0.001,
-                 u_min=-np.inf, u_max=np.inf, anti_windup="clamp",
-                 d_on="measurement", d_filter_tau=0.0):
-        self.kp, self.ki, self.kd = float(kp), float(ki), float(kd)
-        self.dt = float(dt)
-        self.u_min, self.u_max = float(u_min), float(u_max)
-        self.anti_windup = str(anti_windup).lower()
-        self.d_on = str(d_on).lower()
-        self.d_filter_tau = float(d_filter_tau)
-        self.reset()
-
-    def reset(self):
-        """Reset internal integrator accumulator and filter history."""
-        self.integral = 0.0
-        self.prev_meas = None
-        self.prev_error = None
-        self.d_filtered = 0.0
-
-    def update(self, setpoint: float, measurement: float) -> float:
-        """Compute saturated actuator force u(k) given current setpoint and measurement."""
-        error = setpoint - measurement
-
-        p_term = self.kp * error
-        # 2. Derivative Term: D-on-measurement eliminates setpoint kick
-        if self.d_on == "measurement":
-            d_raw = 0.0 if self.prev_meas is None else -(measurement - self.prev_meas) / self.dt
-        else:
-            d_raw = 0.0 if self.prev_error is None else (error - self.prev_error) / self.dt
-
-        # First-order low-pass filter: H(s) = 1 / (tau*s + 1)
-        if self.d_filter_tau > 0.0:
-            alpha = self.dt / (self.d_filter_tau + self.dt)
-            self.d_filtered = d_raw if (self.prev_meas is None and self.prev_error is None) else (self.d_filtered + alpha * (d_raw - self.d_filtered))
-            d_term = self.kd * self.d_filtered
-        else:
-            d_term = self.kd * d_raw
-
-        u_unconstrained = p_term + self.integral + d_term
-        u_sat = float(np.clip(u_unconstrained, self.u_min, self.u_max))
-
-        # 5. Conditional Integration Anti-Windup Clamping
-        if self.anti_windup == "clamp":
-            is_sat = (u_unconstrained > self.u_max or u_unconstrained < self.u_min)
-            drives_deep = (error * u_unconstrained > 0.0)
-            if not (is_sat and drives_deep):
-                self.integral += self.ki * error * self.dt
-        else:
-            self.integral += self.ki * error * self.dt
-
-        self.prev_meas, self.prev_error = float(measurement), float(error)
-        return u_sat
-\end{verbatim}
-\end{footnotesize}
-
-\sectakeaway{Industrial hardening is not an add-on; clamping anti-windup, D-on-measurement, and filtering must be built into the core loop.}
-
-\newpage
-% =============================================================================
-% PAGE 12: SECTION 9 (Cont.): FINAL DEMO & RESULTS
-% =============================================================================
-\subsection{Production Benchmark Demonstration}
-
-The hardened controller was evaluated on the benchmark mass-spring-damper ($m = 1.0\text{ kg}, c = 10.0\text{ N}\cdot\text{s/m}, k = 20.0\text{ N/m}$, Setpoint $r = 1.0\text{ m}$) under realistic actuator saturation ($|u| \le 30.0\text{ N}$) over a full $T = 15.0\text{ s}$ horizon.
-
-\begin{figure}[H]
-\centering
-\includegraphics[height=5.2cm,keepaspectratio]{figures/fig17_final_demo.png}
-\caption{Figure 17. Final production PID verification on test plant under $30\text{ N}$ actuator limit. Zero overshoot, $0.989\text{ s}$ settling, $0.0000\text{ m}$ steady error.}
-\end{figure}
-
-\textbf{Printed Console Execution Telemetry:}
-\begin{footnotesize}
-\begin{verbatim}
-==================================================
-   SECTION 9 FINAL PRODUCTION PID DEMONSTRATION   
-==================================================
-  Controller Configuration:
-    Gains: Kp = 300.0 N/m, Ki = 300.0 N/(m*s), Kd = 30.0 N*s/m
-    Hardening: Anti-Windup = Clamping, D-Input = Measurement, Filter tau = 0.02 s
-    Actuator Limits: [-30.0 N, +30.0 N]
---------------------------------------------------
-  Measured Performance Metrics:
-    1. Rise Time (10% -> 90%):   0.454 s
-    2. Peak Overshoot:           0.00%
-    3. Settling Time (2% band):  0.989 s
-    4. Steady-State Error:       0.0000 m
-    Peak Control Force:          30.00 N
---------------------------------------------------
-  First 5 Applied Force Values: [30.0, 30.0, 30.0, 30.0, 30.0]
-==================================================
-\end{verbatim}
-\end{footnotesize}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lccc}
-\toprule
-\textbf{Metric} & \textbf{Measured Value} & \textbf{Design Specification Target} & \textbf{Engineering Status} \\
-\midrule
-\textbf{Rise Time (10\% to 90\%)} & 0.454 s & $<0.50$ s & \textbf{Pass} \\
-\textbf{Peak Overshoot} & 0.00\% & $<5.0\%$ & \textbf{Pass (Zero Overshoot under saturation)} \\
-\textbf{Settling Time (2\% band)} & 0.989 s & $<1.50$ s & \textbf{Pass (Sub-second settling)} \\
-\textbf{Steady-State Error} & 0.0000 m & $<0.001$ m & \textbf{Pass (Exact target alignment)} \\
-\textbf{Peak Actuator Force} & 30.00 N & $\le 30.0$ N & \textbf{Pass (Clamped at limit)} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Actuator Analysis:} At $t = 0$, $e(0) = 1.0\text{ m}$, demanding an unconstrained $300\text{ N}$. The actuator clamps cleanly at $+30.0\text{ N}$ across the first 5 samples (\texttt{[30.0, 30.0, 30.0, 30.0, 30.0]}). Because conditional clamping anti-windup halts integration during saturation, the mass decelerates smoothly as it nears $1.0\text{ m}$, settling at $0.989\text{ s}$ with zero overshoot and zero error.
-
-\sectakeaway{Hardened PID tames physical saturation, delivering sub-second settling with zero overshoot and exact steady-state precision.}
-
-\newpage
-% =============================================================================
-% PAGE 13: SECTION 10: REAL ROBOTS & MYTHS (Part 1)
-% =============================================================================
-\section{Real robots \& myths}
-
-\subsection{Five Real-World Robotic Implementations}
-
-PID governs over 95\% of industrial feedback loops. Below are five real-world robotic systems, detailing their physical error signals, actuators, and practical gain tuning objectives:
-
+%==================================================================
+\section{Real robots and myths}
+\subsection{Where PID is used}
 \begin{enumerate}
-\item \textbf{Automotive Cruise Control \& Velocity Regulation:}
-\begin{itemize}
-\item \textit{Physical Error Signal:} $e(t) = v_{\text{target}} - v_{\text{measured}}$, where velocity is measured by wheel Hall-effect sensors.
-\item \textit{Actuator:} Electronic throttle body butterfly valve servo angle modulating engine intake air and torque.
-\item \textit{Control Architecture \& Tuning:} Primarily a \textbf{PI controller}. Aerodynamic drag and road incline create a resisting force proportional to $v^2$. Proportional action alone produces steady-state speed droop on uphill climbs. Integral action accumulates throttle to climb hills without speed loss. Derivative action is avoided because wheel sensors pick up road vibration.
-\end{itemize}
+\item \textbf{Cruise control.} Error: target speed minus wheel speed. Actuator: throttle. Usually PI: integral action holds speed on hills; D is skipped because wheel-speed signals are noisy.
+\item \textbf{Drone attitude.} Error: target angle minus IMU angle (outer loop), target rate minus gyro rate (inner loop). Actuator: motor speed controllers. D braking matters, and it must be filtered because motor vibration leaks into the gyro.
+\item \textbf{Robot arm joint.} Error: target angle minus encoder angle. Actuator: motor torque. Holding an arm against gravity needs a steady torque, just like the 20\,N spring force here, so PID is often paired with a gravity feedforward term.
+\item \textbf{Line-following robot.} Error: sideways offset of the line from a sensor array. Actuator: difference in left/right wheel speed. Usually PD: P steers, D stops it zig-zagging.
+\item \textbf{DC motor speed servo.} Error: target minus measured speed. Actuator: PWM voltage. Often a fast inner current loop inside a slower speed loop; I handles friction.
+\end{enumerate}
+PID is among the most widely used controllers in industry; real systems pair it with feedforward, cascaded loops and filtering.
 
-\item \textbf{Quadcopter Drone Attitude \& Altitude Stabilization:}
-\begin{itemize}
-\item \textit{Physical Error Signal:} Cascaded two-loop structure: (1) outer attitude loop: $e_\theta(t) = \theta_{\text{target}} - \theta_{\text{IMU}}$ from Kalman-filtered IMU; (2) inner rate loop: $e_\omega(t) = \omega_{\text{target}} - \omega_{\text{gyro}}$ from high-rate gyroscopes.
-\item \textit{Actuator:} Electronic Speed Controllers (ESCs) commanding PWM duty cycles to brushless DC motors.
-\item \textit{Control Architecture \& Tuning:} High-gain \textbf{PD / PID control} on angular rate. D action provides vital aerodynamic braking against sudden turbulent wind gusts. Because motor vibrations leak into IMU gyros, derivative filtering ($\tau \approx 10\text{--}20\text{ ms}$) is strictly mandatory to prevent motor overheating.
-\end{itemize}
-
-\item \textbf{Robotic Arm Joint Position Control:}
-\begin{itemize}
-\item \textit{Physical Error Signal:} $e(t) = \theta_{\text{target}} - \theta_{\text{actual}}$, measured by high-resolution optical shaft encoders.
-\item \textit{Actuator:} Brushless DC servo torque drives coupled through low-backlash harmonic drive reduction gears.
-\item \textit{Control Architecture \& Tuning:} \textbf{PID with Gravity Feedforward}. Holding an outstretched arm against gravity requires continuous torque (identical to the $20\text{ N}$ spring holding force in our benchmark system). Adding feedforward ($u_{\text{ff}} = m g l \cos\theta$) prevents the arm from dipping while high derivative gain ($K_d$) quenches joint flexure oscillations.
-\end{itemize}
-
-\item \textbf{Autonomous Line-Following Mobile Robot:}
-\begin{itemize}
-\item \textit{Physical Error Signal:} Lateral tracking offset $e(t) = x_{\text{line}} - x_{\text{chassis}}$, measured by an array of infrared reflectance phototransistors sensing the contrast between floor tape and background.
-\item \textit{Actuator:} Pulse-width-modulated H-bridge motor drivers controlling the differential RPM of left and right drive wheels.
-\item \textit{Control Architecture \& Tuning:} Fast \textbf{PD controller}. Proportional action steers wheels proportional to lateral deviation. Derivative action dampens the turning rate as the robot realigns with the tape, preventing the vehicle from fishtailing or oscillating off the line at sharp corners.
-\end{itemize}
-
-\item \textbf{Precision DC Motor Speed \& Current Servo:}
-\begin{itemize}
-\item \textit{Physical Error Signal:} Rotational speed error $e_\omega(t) = \omega_{\text{target}} - \omega_{\text{encoder}}$.
-\item \textit{Actuator:} Full-bridge MOSFET power inverter applying high-frequency PWM voltage pulses.
-\item \textit{Control Architecture \& Tuning:} Dual nested loops: an ultra-fast inner PI current/torque loop ($\sim 10\text{ kHz}$) nested inside an outer PI/PID speed loop ($\sim 1\text{ kHz}$). Integral action compensates for mechanical load friction.
-\end{itemize}
+\subsection{Five myths, tested}
+\begin{enumerate}
+\item \textbf{``More gain is always better.''} Raising $K_p$ 100$\to$1000 cuts steady error but overshoot goes 0\%$\to$57.6\% and the starting force reaches 1000\,N (Fig.~5).
+\item \textbf{``I fixes everything.''} With a 30\,N limit the integral winds up: 17.6\% overshoot and 2.98\,s settling until clamping is added (Fig.~11).
+\item \textbf{``D predicts the future.''} D only reacts to the current slope, and it amplifies noise: 1\,mm of sensor noise makes 43\,N of force chatter (Fig.~12).
+\item \textbf{``One set of gains fits all conditions.''} The same 300/300/30 gains give 4.27\% overshoot at 1\,kg, 6.9\% at 2\,kg and 4.0\% at 0.5\,kg (run \texttt{playground.py --mass 2}).
+\item \textbf{``Ziegler--Nichols gives the final gains.''} It gave 52.4\% overshoot here; retuning brought it to 3.1\% (Fig.~16).
 \end{enumerate}
 
-\sectakeaway{In real robotics, PID is never applied blindly; it is paired with feedforward, cascaded rate loops, and aggressive filtering.}
-
-\newpage
-% =============================================================================
-% PAGE 14: SECTION 10 (Cont.): FIVE PID MYTHS DEBUNKED
-% =============================================================================
-\subsection{Five Prevalent PID Myths Debunked by Empirical Data}
-
-\begin{enumerate}
-\item \textbf{Myth 1: ``More gain is always better---just crank up $K_p$ to make the robot fast.''}
-\begin{itemize}
-\item \textit{The Wrong Belief:} If a machine responds sluggishly, increasing $K_p$ indefinitely will yield an infinitely responsive system.
-\item \textit{The Physical Reality:} In physical systems, increasing $K_p$ raises effective loop stiffness without increasing damping. Closed-loop damping ratio is $\zeta = \frac{c}{2\sqrt{m(k + K_p)}}$. As $K_p$ grows, $\zeta \to 0$, driving the system into violent resonance.
-\item \textit{Direct Code Evidence:} \textbf{Figure 5 (F05)}. Raising $K_p$ from $100 \to 1000\text{ N/m}$ increases overshoot from $0\%$ to $57.6\%$ and demands a destructive $1000\text{ N}$ impulse shock that strips gearbox teeth.
-\end{itemize}
-
-\item \textbf{Myth 2: ``The Integral term fixes everything---just add $K_i$ whenever you have an error.''}
-\begin{itemize}
-\item \textit{The Wrong Belief:} Because integration drives steady-state error to zero, high $K_i$ guarantees perfect target tracking.
-\item \textit{The Physical Reality:} Pure integration injects $90^\circ$ of phase lag. When actuators saturate at physical torque limits, error accumulates unchecked in software (windup). When the robot finally reaches the setpoint, the overloaded integrator cannot dump its stored charge immediately, blowing past the target.
-\item \textit{Direct Code Evidence:} \textbf{Figure 11 (F11)}. Under a $30\text{ N}$ motor ceiling, unclamped integral accumulation triggers a $17.6\%$ overshoot and takes $2.98\text{ s}$ to settle. Only conditional clamping anti-windup quenches overshoot to $0.0\%$.
-\end{itemize}
-
-\item \textbf{Myth 3: ``Derivative action predicts the future perfectly.''}
-\begin{itemize}
-\item \textit{The Wrong Belief:} Because the derivative is proportional to error slope ($K_d \frac{de}{dt}$), it acts as an ideal predictive telescope.
-\item \textit{The Physical Reality:} Physical sensors do not output smooth continuous equations; they produce discrete measurements corrupted by high-frequency electrical noise and vibration. Discrete differentiation of noise $\sigma$ at sample time $\Delta t$ scales noise amplitude by $\frac{\sqrt{2}\sigma}{\Delta t}$.
-\item \textit{Direct Code Evidence:} \textbf{Figure 12 (F12)}. With just $\pm 1\text{ mm}$ of sensor noise, raw derivative action generates $43.4\text{ N}$ RMS force chatter across the motor---exceeding the entire $30\text{ N}$ motor capacity with acoustic buzzing and heat.
-\end{itemize}
-
-\item \textbf{Myth 4: ``One set of tuned gains works across all operating conditions.''}
-\begin{itemize}
-\item \textit{The Wrong Belief:} Once a PID controller is tuned on a test bench, those gains remain optimal regardless of system payload.
-\item \textit{The Physical Reality:} Linear PID assumes fixed physical plant parameters ($m, c, k$). When a manipulator picks up a payload, mass doubles, shifting natural frequency $\omega_n = \sqrt{k/m}$ and damping $\zeta \propto 1/\sqrt{m}$.
-\item \textit{Direct Code Evidence:} \textbf{Mass Sensitivity Benchmark} (\texttt{playground.py --mass 2.0}). When mass doubles from $1.0\text{ kg} \to 2.0\text{ kg}$ under identical baseline gains ($300/300/30$), overshoot jumps from $4.27\%$ to $6.92\%$ and initial acceleration drops by half.
-\end{itemize}
-
-\item \textbf{Myth 5: ``Ziegler-Nichols formulas provide the final, optimal control gains.''}
-\begin{itemize}
-\item \textit{The Wrong Belief:} Entering $K_u$ and $T_u$ into the classical ZN lookup table produces a production-ready controller.
-\item \textit{The Physical Reality:} The 1942 Ziegler-Nichols recipe was explicitly formulated for chemical process plants where fast disturbance rejection was valued over smooth positioning, accepting an aggressive quarter-decay ratio ($\approx 50\%$ overshoot). In robotics, $50\%$ overshoot slams mechanical linkages into hardstops.
-\item \textit{Direct Code Evidence:} \textbf{Figure 16 (F16)}. Classic ZN PID produces a violent $\mathbf{52.44\%}$ overshoot and rings for $9.9\text{ s}$. Tailored engineering retuning ($3.60 / 0.80 / 3.20$) is mandatory to tame overshoot down to $3.10\%$.
-\end{itemize}
-\end{enumerate}
-
-\sectakeaway{Engineering wisdom begins where textbook myths end: respect saturation, filter derivative noise, and never trust raw ZN gains in robotics.}
-
-\newpage
-% =============================================================================
-% PAGE 15: APPENDIX, REPRODUCIBILITY & TRAPS CHECKLIST
-% =============================================================================
-\section*{Appendix: Reproducibility, Interview Readiness \& Traps Verification}
-
-\subsection*{One-Command Master Reproducibility}
-The entire suite of differential equation simulations, figure generation routines, and markdown tables can be reproduced from repository root:
-\begin{footnotesize}
-\begin{verbatim}
-git clone https://github.com/vichruth/ModernMonks-PID-Control.git
-cd ModernMonks-PID-Control
-pip install -r requirements.txt
-python3 run_all.py
-\end{verbatim}
-\end{footnotesize}
-The master pipeline executes all 10 sanity assertions in \texttt{tests/test\_sanity.py} and regenerates all 17 figures and 6 tables in \textbf{36.64 seconds} with zero external control libraries.
-
-\subsection*{Interview Preparation: Prediction Log Summary}
-Before running hypothetical perturbations in \texttt{playground.py}, physical intuition was verified against simulation:
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lccp{8.5cm}}
-\toprule
-\textbf{What-If Scenario} & \textbf{Overshoot} & \textbf{Settling} & \textbf{Physical Mechanism \& Interview Rationale} \\
-\midrule
-Halve Mass ($m = 0.5\text{ kg}$) & 4.00\% & 1.454 s & Damping ratio $\zeta \propto 1/\sqrt{m}$ increases to $1.58$; system becomes slightly more overdamped. \\
-Double Mass ($m = 2.0\text{ kg}$) & 6.91\% & 1.355 s & Inertia increases; closed-loop damping drops to $\zeta = 0.79$, carrying block further past target. \\
-Weaker P ($K_p = 100\text{ N/m}$) & 24.79\% & 2.619 s & Slow rise ($t_r = 0.36\text{s}$) forces integrator to accumulate massive charge, driving overshoot. \\
-Aggressive P ($K_p = 600\text{ N/m}$) & 1.18\% & 0.157 s & Very stiff loop; settles in $0.157\text{ s}$, but demands unrealistic $600\text{ N}$ impulse at $t = 0$. \\
-Force Limit $u_{\max} = 22\text{ N}$ & 9.99\% & 5.406 s & Barely exceeds $20\text{ N}$ holding push ($a_{\text{net}} \le 2\text{ m/s}^2$); slow crawl caps peak momentum. \\
-Force Limit $u_{\max} = 25\text{ N}$ & 19.59\% & 3.583 s & \textbf{Worst-case windup:} Accelerates faster than 22 N while integrator is heavily saturated. \\
-Zero D ($K_d = 0$) & 38.67\% & 0.833 s & Closed-loop damping collapses to $\zeta = 0.280$; system rings violently without velocity braking. \\
-Sensor Noise ($\sigma = 2\text{ mm}$) & 4.31\% & 1.414 s & Noise differentiation at $1\text{ ms}$ generates violent $85\text{ N}$ RMS actuator force chatter. \\
-Slow Sample ($\Delta t = 100\text{ ms}$) & $\infty$ & never & ZOH delay ($50\text{ ms}$) induces negative phase margin; oscillations diverge without bound. \\
-Setpoint Kick (D-on-error) & 0.00\% & 0.721 s & Differentiating $1.0\text{ m}$ step creates instant $30,300\text{ N}$ destructive actuator shock. \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection*{Submission Traps Checklist Verification}
-\begin{itemize}
-\item[\textbf{[PASS]}] \textbf{Zero external control libraries:} Verified via \texttt{grep -rn "import" .}; pure NumPy and Matplotlib only.
-\item[\textbf{[PASS]}] \textbf{One-command reproduction:} \texttt{python3 run\_all.py} recreates all 17 figures and 6 tables cleanly in 36.6s.
-\item[\textbf{[PASS]}] \textbf{Consistent figure formatting:} Every figure includes titles, units on all axes, legends, and caption templates.
-\item[\textbf{[PASS]}] \textbf{No vague words:} Quantitative numbers used throughout (e.g., ``overshoot reduced from $17.6\%$ to $0.0\%$'').
-\item[\textbf{[PASS]}] \textbf{Honest metric bounds:} Rise time and settling time reported as \texttt{"n/a"} or \texttt{"never"} where applicable.
-\item[\textbf{[PASS]}] \textbf{Overshoot reference:} Explicitly defined relative to setpoint ($r = 1.0\text{ m}$) across all chapters.
-\item[\textbf{[PASS]}] \textbf{Noise model stated:} Gaussian noise $\mathcal{N}(0, \sigma^2)$ with $\sigma = 1.0\text{ mm}$ and reproducible seed 42.
-\item[\textbf{[PASS]}] \textbf{Multi-rate integration:} Plant stepped at fine continuous $\Delta t = 1\text{ ms}$; controller updated at discrete $\Delta t_{\text{ctrl}}$.
-\item[\textbf{[PASS]}] \textbf{Anti-windup verification:} Saturation limit $|u| \le 30\text{ N}$ evaluated with anti-windup toggled off for ``before''.
-\item[\textbf{[PASS]}] \textbf{Strict page budget:} Exactly 15 pages; all 10 required section headings presented in order.
-\item[\textbf{[PASS]}] \textbf{Repository documentation:} \texttt{README.md}, \texttt{AI\_USAGE.md}, \texttt{WRITEUP.md}, and \texttt{prediction\_log.md} complete.
-\end{itemize}
+%==================================================================
+\section*{Reproducing the results, and what is missing}
+\textbf{Reproduce:} clone the repository, \texttt{pip install -r requirements.txt}, then \texttt{python run\_all.py}, which regenerates all 17 figures and the tables in about 40\,s. \texttt{python playground.py} lets you change gains, mass, noise or force limit and prints the four measures. A test script checks the main numbers against theory.\\
+\textbf{Method:} semi-implicit Euler with $\Delta t=1$\,ms (halving $\Delta t$ changes overshoot by 0.01 points); noise is Gaussian with fixed seed 42.\\
+\textbf{Limits of this work:} everything is simulation of a linear plant; no hardware was used. The chosen gains are a good baseline, not the optimum (Section~6). The slow-update limit (about 60\,ms) depends on the stated test (long-run growth).
 
 \end{document}
